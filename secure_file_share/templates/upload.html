@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Upload - SecureShare{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Upload File</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div class="upload-container">
+    <form id="uploadForm" method="POST" enctype="multipart/form-data">
+        <div class="upload-area">
+            <input type="file" id="fileInput" name="file" required>
+            <label for="fileInput" class="upload-label">
+                <div class="upload-icon">📁</div>
+                <p>Click to select file or drag & drop</p>
+                <small>Max 100MB. Supported: txt, pdf, images, zip, docx</small>
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary" id="uploadBtn" disabled>Upload File</button>
+    </form>
+</div>
+{% endblock %}
