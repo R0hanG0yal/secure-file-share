@@ -9,7 +9,7 @@ app = Flask(__name__,
             template_folder="../frontend",
             static_folder="../frontend/static")
 
-app.secret_key = "super-secure-secret"
+app.secret_key = os.getenv('SECRET_KEY', 'super-secure-secret')
 
 init_db()
 
@@ -58,8 +58,7 @@ def share(file_id):
         int(request.form["hours"]),
         "one_time" in request.form
     )
-    host = request.host.replace("localhost", "127.0.0.1")
-    return render_template("share_link.html", link=f"http://{host}/download/{token}")
+    return render_template("share_link.html", link=f"http://{request.host}/download/{token}")
 
 @app.route("/download/<token>", methods=["GET", "POST"])
 def download(token):
@@ -131,5 +130,5 @@ def access_requests():
     
     return render_template("access_requests.html", pending_requests=pending_requests, history_requests=history_requests)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5004, debug=True)
+    port = int(os.getenv('PORT', 5004))
+    app.run(host="0.0.0.0", port=port, debug=False)
