@@ -14,13 +14,16 @@ venv/
 env/
 
 # Database (don't commit local SQLite db)
-backend/secure_share.db
 *.db
 
 # Uploaded files (don't commit user data)
 backend/uploads/
 backend/storage/
 uploads/
+
+# Old duplicate directories
+secure_file_sharing/
+static/
 
 # Environment variables
 .env
