@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Your Files</h2>
+<p class="page-subtitle">Manage and share your encrypted files securely.</p>
+
+<div class="stats-row">
+    <div class="stat-card">
+        <div class="stat-label">Total Files</div>
+        <div class="stat-value">{{ files|length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Encrypted</div>
+        <div class="stat-value">{{ files|length }}</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-label">Status</div>
+        <div class="stat-value" style="font-size:1rem; color: var(--accent-success);">● Secure</div>
+    </div>
+</div>
+
+{% if files %}
+<div class="grid">
+    {% for f in files %}
+    <div class="file-card" id="file-{{ f.id }}">
+        <div class="file-icon">📄</div>
+        <div class="file-name">{{ f.filename }}</div>
+        <form action="/share/{{ f.id }}" method="post" class="file-actions" style="flex-direction: row; align-items: center;">
+            <input type="number" name="hours" value="1" min="1" placeholder="Hrs" title="Expiry hours" id="hours-{{ f.id }}">
+            <label style="margin-bottom: 0; white-space: nowrap; font-size: 0.8rem;">
+                <input type="checkbox" name="one_time"> One-time
+            </label>
+            <button class="btn" type="submit" style="padding: 0.45rem 0.9rem; font-size: 0.8rem;">Share</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-state-icon">📂</div>
+    <p class="empty-state-text">No files yet. Upload your first file to get started.</p>
+    <a href="/upload" class="btn">Upload a File</a>
+</div>
+{% endif %}
+{% endblock %}

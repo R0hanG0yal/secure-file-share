@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card" style="max-width: 500px;">
+        <div class="auth-header">
+            <h2>Link Generated!</h2>
+            <p>Your secure share link is ready.</p>
+        </div>
+        
+        <div class="share-container" style="text-align: left; margin-top: 1.5rem;">
+            <label for="share-link" style="font-size: 0.9rem; font-weight: 600;">Share Link</label>
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem;">
+                <input type="text" id="share-link" value="{{ link }}" readonly style="margin-bottom: 0; background: var(--bg-surface); cursor: pointer;" onclick="this.select();">
+                <button class="btn" id="copy-btn" onclick="copyLink()">
+                    Copy
+                </button>
+            </div>
+            
+            <div class="text-center">
+                <a href="/dashboard" class="btn btn-outline" style="width: 100%;">Return to Dashboard</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyLink() {
+    var copyText = document.getElementById("share-link");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); /* For mobile devices */
+    
+    try {
+        navigator.clipboard.writeText(copyText.value).then(function() {
+            var btn = document.getElementById("copy-btn");
+            var originalText = btn.innerText;
+            btn.innerText = "Copied! ✅";
+            btn.style.background = "var(--accent-success)";
+            
+            setTimeout(function() {
+                btn.innerText = originalText;
+                btn.style.background = "var(--accent-primary)";
+            }, 2000);
+        });
+    } catch (err) {
+        // Fallback
+        document.execCommand("copy");
+        var btn = document.getElementById("copy-btn");
+        btn.innerText = "Copied! ✅";
+        setTimeout(function() {
+            btn.innerText = "Copy";
+        }, 2000);
+    }
+}
+</script>
+{% endblock %}

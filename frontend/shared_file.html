@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card share-container" id="shared-file-card">
+        <div class="share-icon">📁</div>
+        <h2>{{ file.original_name }}</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">This file has been securely shared with you.</p>
+
+        <form method="POST" id="shared-file-form">
+            <p style="text-align: left; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                Enter your email to access or request download:
+            </p>
+            <div style="display: flex; gap: 0.5rem;">
+                <input type="email" name="email" required placeholder="your.email@example.com" style="flex: 1; margin-bottom: 0;" id="shared-email">
+                <button type="submit" class="btn" id="shared-submit">Continue</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Access Requests</h2>
+<p class="page-subtitle">Review who's requesting access to your shared files.</p>
+
+{% if pending_requests %}
+<div class="grid">
+    {% for r in pending_requests %}
+    <div class="file-card" id="request-{{ r.id }}">
+        <div class="file-icon">🔔</div>
+        <div class="file-name">{{ r.filename }}</div>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+            Requested by <strong style="color: var(--accent-primary-light);">{{ r.email }}</strong>
+        </p>
+        <form method="post" style="flex-direction: row; gap: 0.5rem; display: flex;">
+            <input type="hidden" name="id" value="{{ r.id }}">
+            <button class="btn" name="status" value="approved" style="flex: 1;">✅ Approve</button>
+            <button class="btn btn-danger" name="status" value="denied" style="flex: 1;">❌ Deny</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="padding: 2rem;">
+    <div class="empty-state-icon">✨</div>
+    <p class="empty-state-text">No pending access requests.</p>
+</div>
+{% endif %}
+
+{% if history_requests %}
+<h3 style="margin-top: 3rem; margin-bottom: 1rem; color: var(--text-muted); font-size: 1.2rem;">Request History</h3>
+<div class="grid">
+    {% for r in history_requests %}
+    <div class="file-card" id="request-{{ r.id }}" style="opacity: 0.8;">
+        <div class="file-icon">
+            {% if r.status == 'approved' %}✅{% else %}❌{% endif %}
+        </div>
+        <div class="file-name">{{ r.filename }}</div>
+        <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 0.5rem;">
+            Requested by <strong>{{ r.email }}</strong>
+        </p>
+        <div style="font-size: 0.85rem; font-weight: 600; color: {% if r.status == 'approved' %}var(--accent-success){% else %}var(--accent-danger){% endif %};">
+            Status: {{ r.status | capitalize }}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

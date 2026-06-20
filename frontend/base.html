@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SecureShare — Encrypted File Sharing</title>
+    <meta name="description" content="Share files securely with end-to-end encryption, expiring links, and access control.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <!-- Ambient glow orbs -->
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    <nav class="navbar" id="main-nav">
+        <div class="nav-inner">
+            <a href="/" class="nav-brand" id="nav-brand">
+                <span class="brand-icon">🔒</span>
+                <span class="brand-text">Secure<span class="brand-accent">Share</span></span>
+            </a>
+            <div class="nav-links" id="nav-links">
+                {% if session.get('user_id') %}
+                    <a href="/dashboard" class="nav-link" id="nav-dashboard">
+                        <span class="nav-icon">📁</span> Dashboard
+                    </a>
+                    <a href="/upload" class="nav-link" id="nav-upload">
+                        <span class="nav-icon">⬆️</span> Upload
+                    </a>
+                    <a href="/access_requests" class="nav-link" id="nav-requests">
+                        <span class="nav-icon">🔔</span> Requests
+                    </a>
+                    <a href="/logout" class="btn-logout" id="nav-logout">Logout</a>
+                {% else %}
+                    <a href="/login" class="nav-link" id="nav-login">Login</a>
+                    <a href="/register" class="btn-primary-nav" id="nav-register">Get Started</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages" id="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash flash-{{ category }}" id="flash-{{ loop.index }}">
+                            <span class="flash-icon">{% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}</span>
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer" id="main-footer">
+        <div class="footer-inner">
+            <p class="footer-text">© 2026 SecureShare — Built with 🔐 encryption</p>
+        </div>
+    </footer>
+</body>
+</html>
