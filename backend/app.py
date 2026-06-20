@@ -5,9 +5,11 @@ from auth import register_user, authenticate_user, login_required
 from file_service import save_file, get_user_files, get_file, UPLOAD_FOLDER
 from share_service import *
 
+_BASE = os.path.dirname(os.path.abspath(__file__))
+
 app = Flask(__name__,
-            template_folder="../frontend",
-            static_folder="../frontend/static")
+            template_folder=os.path.join(_BASE, "..", "frontend"),
+            static_folder=os.path.join(_BASE, "..", "frontend", "static"))
 
 app.secret_key = os.getenv('SECRET_KEY', 'super-secure-secret')
 
@@ -129,6 +131,3 @@ def access_requests():
     history_requests = [r for r in all_requests if r["status"] != "pending"]
     
     return render_template("access_requests.html", pending_requests=pending_requests, history_requests=history_requests)
-
-    port = int(os.getenv('PORT', 5004))
-    app.run(host="0.0.0.0", port=port, debug=False)
