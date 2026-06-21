@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, session, send_from_directory, flash
 import os, base64, mimetypes
+import threading, time, urllib.request
 from database import init_db
 from auth import register_user, authenticate_user, login_required
 from file_service import save_file, get_user_files, get_file, UPLOAD_FOLDER
@@ -131,3 +132,24 @@ def access_requests():
     history_requests = [r for r in all_requests if r["status"] != "pending"]
     
     return render_template("access_requests.html", pending_requests=pending_requests, history_requests=history_requests)
+
+@app.route("/ping")
+def ping():
+    return "pong", 200
+
+def keep_alive():
+    url = os.getenv("RENDER_EXTERNAL_URL")
+    if not url:
+        return
+    # wait a bit before first ping
+    time.sleep(10)
+    ping_url = f"{url.rstrip('/')}/ping"
+    while True:
+        try:
+            req = urllib.request.Request(ping_url, headers={'User-Agent': 'KeepAlive/1.0'})
+            urllib.request.urlopen(req)
+        except Exception:
+            pass
+        time.sleep(14 * 60)
+
+threading.Thread(target=keep_alive, daemon=True).start()
