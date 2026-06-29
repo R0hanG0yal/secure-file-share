@@ -1,6 +1,12 @@
-from flask import Flask, render_template, request, redirect, session, send_from_directory, flash
-import os, base64, mimetypes
+from flask import Flask, render_template, request, redirect, session, send_from_directory, flash, jsonify
+import os, base64, mimetypes, uuid, string, random
 import threading, time, urllib.request
+# pyrefly: ignore [missing-import]
+from flask_wtf.csrf import CSRFProtect
+# pyrefly: ignore [missing-import]
+from flask_limiter import Limiter
+# pyrefly: ignore [missing-import]
+from flask_limiter.util import get_remote_address
 from database import init_db
 from auth import register_user, authenticate_user, login_required
 from file_service import save_file, get_user_files, get_file, UPLOAD_FOLDER
@@ -14,10 +20,42 @@ app = Flask(__name__,
 
 app.secret_key = os.getenv('SECRET_KEY', 'super-secure-secret')
 
+# Strict Session Cookies
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax'
+)
+
+# CSRF Protection
+csrf = CSRFProtect(app)
+
+# Rate Limiting
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' stun:; img-src 'self' data: blob: https://api.qrserver.com; child-src 'self' blob:; frame-src 'self' blob:; object-src 'self' blob:;"
+    
+    # Prevent caching for API endpoints
+    if request.path.startswith('/api/'):
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        
+    return response
+
 init_db()
 
 @app.route("/", methods=["GET", "POST"])
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
         user = authenticate_user(request.form["email"], request.form["password"])
@@ -28,6 +66,7 @@ def login():
     return render_template("login.html")
 
 @app.route("/register", methods=["GET", "POST"])
+@limiter.limit("5 per minute")
 def register():
     if request.method == "POST":
         if register_user(request.form["email"], request.form["password"]):
@@ -49,8 +88,17 @@ def dashboard():
 @login_required
 def upload():
     if request.method == "POST":
-        save_file(request.files["file"], session["user_id"])
-        return redirect("/dashboard")
+        try:
+            if "file" not in request.files or request.files["file"].filename == "":
+                return jsonify({"error": "No file selected"}), 400
+            save_file(request.files["file"], session["user_id"])
+            db = get_db()
+            file_record = db.execute("SELECT id FROM files WHERE owner_id = ? ORDER BY id DESC LIMIT 1", (session["user_id"],)).fetchone()
+            return jsonify({"success": True, "file_id": file_record["id"]})
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            return jsonify({"error": "Upload failed: " + str(e)}), 500
     return render_template("upload.html")
 
 @app.route("/share/<int:file_id>", methods=["POST"])
@@ -61,7 +109,7 @@ def share(file_id):
         int(request.form["hours"]),
         "one_time" in request.form
     )
-    return render_template("share_link.html", link=f"http://{request.host}/download/{token}")
+    return render_template("share_link.html", link=f"http://{request.host}/download/{token}", file_id=file_id)
 
 @app.route("/download/<token>", methods=["GET", "POST"])
 def download(token):
@@ -118,7 +166,7 @@ def download(token):
             request_access(file["id"], email)
             flash("Access requested! Please wait for the owner to approve.", "success")
 
-    return render_template("shared_file.html", file=file)
+    return render_template("shared_file.html", file=file, email=request.form.get("email") if request.method == "POST" else None)
 
 @app.route("/access_requests", methods=["GET", "POST"])
 @login_required
@@ -153,3 +201,174 @@ def keep_alive():
         time.sleep(14 * 60)
 
 threading.Thread(target=keep_alive, daemon=True).start()
+
+# ============================================================
+# P2P Signaling and Room Management (AirIt Model)
+# ============================================================
+
+# In-memory stores for P2P state
+active_rooms = {}  # room_code -> { "created_at": timestamp, "files": [] }
+room_access_requests = {} # room_code -> [ { "id": req_id, "email": email, "status": "pending" | "approved" | "denied" } ]
+active_signals = {} # room_code -> { "sender_queue": [], "receiver_queue": [], "last_activity": timestamp }
+
+def generate_room_code():
+    while True:
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+        if code not in active_rooms:
+            return code
+
+@app.route("/p2p", strict_slashes=False)
+def p2p_portal():
+    return render_template("p2p_portal.html")
+
+@app.route("/p2p/send", strict_slashes=False)
+def p2p_send():
+    return render_template("p2p_send.html")
+
+@app.route("/p2p/receive", strict_slashes=False)
+def p2p_receive():
+    room_code = request.args.get("room", "")
+    return render_template("p2p_receive.html", room_code=room_code)
+
+def cleanup_stale_rooms():
+    now = time.time()
+    stale_codes = [code for code, data in active_rooms.items() if now - data["created_at"] > 3600]
+    for code in stale_codes:
+        active_rooms.pop(code, None)
+        room_access_requests.pop(code, None)
+        active_signals.pop(code, None)
+
+@app.route("/api/p2p/create", methods=["POST"])
+@csrf.exempt
+@limiter.limit("10 per minute")
+def api_p2p_create():
+    cleanup_stale_rooms()
+    if len(active_rooms) > 10000:
+        return jsonify({"error": "Too many active rooms"}), 429
+    code = generate_room_code()
+    active_rooms[code] = {
+        "created_at": time.time(),
+        "files": []
+    }
+    room_access_requests[code] = []
+    active_signals[code] = {
+        "sender_queue": [],
+        "receiver_queue": [],
+        "last_activity": time.time()
+    }
+    return jsonify({"room_code": code})
+
+@app.route("/api/p2p/register_files/<room_code>", methods=["POST"])
+@csrf.exempt
+@limiter.exempt
+def api_p2p_register_files(room_code):
+    if room_code not in active_rooms:
+        return jsonify({"error": "Room not found"}), 404
+    data = request.get_json() or {}
+    active_rooms[room_code]["files"] = data.get("files", [])
+    return jsonify({"success": True})
+
+@app.route("/api/p2p/room_info/<room_code>", methods=["GET"])
+@limiter.exempt
+def api_p2p_room_info(room_code):
+    if room_code not in active_rooms:
+        return jsonify({"error": "Room not found"}), 404
+    return jsonify({
+        "room_code": room_code,
+        "files": active_rooms[room_code]["files"]
+    })
+
+@app.route("/api/p2p/request_access/<room_code>", methods=["POST"])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def api_p2p_request_access(room_code):
+    if room_code not in active_rooms:
+        return jsonify({"error": "Room not found"}), 404
+    data = request.get_json() or {}
+    email = data.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+    
+    requests_list = room_access_requests.setdefault(room_code, [])
+    req_id = str(uuid.uuid4())
+    new_req = {
+        "id": req_id,
+        "email": email,
+        "status": "pending"
+    }
+    requests_list.append(new_req)
+    return jsonify({"request_id": req_id, "status": "pending"})
+
+@app.route("/api/p2p/check_approval/<room_code>/<request_id>", methods=["GET"])
+@limiter.exempt
+def api_p2p_check_approval(room_code, request_id):
+    if room_code not in room_access_requests:
+        return jsonify({"error": "Room not found"}), 404
+    for req in room_access_requests[room_code]:
+        if req["id"] == request_id:
+            return jsonify({"status": req["status"]})
+    return jsonify({"error": "Request not found"}), 404
+
+@app.route("/api/p2p/check_requests/<room_code>", methods=["GET"])
+@limiter.exempt
+def api_p2p_check_requests(room_code):
+    if room_code not in room_access_requests:
+        return jsonify({"error": "Room not found"}), 404
+    pending = [r for r in room_access_requests[room_code] if r["status"] == "pending"]
+    return jsonify({"requests": pending})
+
+@app.route("/api/p2p/approve_request/<room_code>/<request_id>", methods=["POST"])
+@csrf.exempt
+@limiter.exempt
+def api_p2p_approve_request(room_code, request_id):
+    if room_code not in room_access_requests:
+        return jsonify({"error": "Room not found"}), 404
+    data = request.get_json() or {}
+    status = data.get("status", "approved")
+    for req in room_access_requests[room_code]:
+        if req["id"] == request_id:
+            req["status"] = status
+            return jsonify({"success": True, "status": status})
+    return jsonify({"error": "Request not found"}), 404
+
+@app.route("/api/p2p/signal/<room_code>/send", methods=["POST"])
+@csrf.exempt
+@limiter.exempt
+def api_p2p_signal_send(room_code):
+    if room_code not in active_signals:
+        return jsonify({"error": "Room not found"}), 404
+    data = request.get_json() or {}
+    role = data.get("role")
+    msg = data.get("message")
+    
+    if not role or not msg:
+        return jsonify({"error": "Role and message are required"}), 400
+        
+    active_signals[room_code]["last_activity"] = time.time()
+    
+    if role == "sender":
+        active_signals[room_code]["receiver_queue"].append(msg)
+    else:
+        active_signals[room_code]["sender_queue"].append(msg)
+        
+    return jsonify({"success": True})
+
+@app.route("/api/p2p/signal/<room_code>/receive", methods=["GET"])
+@limiter.exempt
+def api_p2p_signal_receive(room_code):
+    if room_code not in active_signals:
+        return jsonify({"error": "Room not found"}), 404
+    role = request.args.get("role")
+    if not role:
+        return jsonify({"error": "Role is required"}), 400
+        
+    active_signals[room_code]["last_activity"] = time.time()
+    
+    if role == "sender":
+        messages = active_signals[room_code]["sender_queue"]
+        active_signals[room_code]["sender_queue"] = []
+    else:
+        messages = active_signals[room_code]["receiver_queue"]
+        active_signals[room_code]["receiver_queue"] = []
+        
+    return jsonify({"messages": messages})

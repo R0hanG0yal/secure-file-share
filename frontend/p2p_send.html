@@ -1,0 +1,799 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 1000px; margin: 0 auto;">
+    <!-- Header with Back arrow & Sender badge -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div style="display: flex; align-items: center; gap: 1rem; min-width: 0;">
+            <a href="/dashboard" style="font-size: 1.5rem; color: var(--text-secondary); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; background: var(--bg-card); box-shadow: var(--shadow-card); flex-shrink: 0;" title="Back to Dashboard">←</a>
+            <div style="min-width: 0;">
+                <h2 style="margin-bottom: 0;">Send files</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.2rem; word-wrap: break-word;">Share your room code with the receiver, then add files.</p>
+            </div>
+        </div>
+        <span class="role-badge" style="background: var(--accent-primary-dim); color: var(--accent-primary-light); padding: 0.5rem 1.2rem; border-radius: 100px; font-weight: 700; font-size: 0.85rem; border: 1px solid rgba(193, 154, 107, 0.3); white-space: nowrap; flex-shrink: 0;">● Sender</span>
+    </div>
+
+    <!-- Main Grid -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;" class="p2p-grid" id="sender-main-grid">
+        <!-- Left Side: Room Code, QR, and Drop Zone -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Room Code Card -->
+            <div class="card" style="padding: 1.75rem;">
+                <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.75rem;">Your Room Code</div>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                    <div id="room-code-display" style="font-size: 2.2rem; font-weight: 900; font-family: monospace; letter-spacing: 0.1em; color: var(--text-primary); text-shadow: 0 2px 4px rgba(0,0,0,0.05);">------</div>
+                    <button class="btn" id="copy-link-btn" onclick="copyReceiveLink()" style="padding: 0.75rem 1.5rem; font-size: 0.9rem;">
+                         Copy Code
+                    </button>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.75rem; line-height: 1.4;">Share this 6-character code (or the link) with whoever needs to receive files.</p>
+            </div>
+
+            <!-- QR Code Card -->
+            <div class="card qr-card-content" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
+                <div style="background: #ffffff; padding: 0.5rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-inset); width: 140px; height: 140px; flex-shrink: 0;">
+                    <img id="qr-code-img" src="" alt="QR Code" style="width: 100%; height: 100%; display: none;">
+                    <div id="qr-placeholder" style="font-size: 2rem; color: var(--text-muted); opacity: 0.5;">📱</div>
+                </div>
+                <div>
+                    <h4 style="margin-bottom: 0.3rem; font-weight: 700; font-size: 1rem; color: var(--text-primary);">Scan to open on mobile</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">Point a phone camera at this code to open the receiver page on another device directly.</p>
+                </div>
+            </div>
+
+            <!-- Drop Zone Card -->
+            <div class="card" style="padding: 1.5rem;">
+                <div class="file-upload-wrapper" id="drop-zone" style="height: 180px; margin-bottom: 0;">
+                    <input type="file" id="p2p-file-input" class="premium-file-input" style="z-index: 5;" multiple>
+                    <div class="file-upload-display">
+                        <div class="upload-icon-large" id="upload-icon">⚡</div>
+                        <div class="upload-text-main" id="upload-main-text">Drop files here</div>
+                        <div class="upload-text-sub">or tap to browse — multiple files supported</div>
+                    </div>
+                </div>
+
+                <!-- Selected Files Display -->
+                <div id="selected-file-card" style="display: none; margin-top: 1rem;">
+                    <div style="font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <span>Files to Send</span>
+                        <button onclick="clearSelectedFile()" style="background: none; border: none; font-size: 0.75rem; cursor: pointer; color: var(--accent-danger); font-weight: 700;">Clear All</button>
+                    </div>
+                    <div id="selected-files-list" style="max-height: 250px; overflow-y: auto; padding-right: 0.25rem;">
+                        <!-- List of files -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Side: Connection Status & Action Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+            
+            <!-- Connection Status Card -->
+            <div class="card" style="padding: 2rem;">
+                <h3 style="font-size: 1.2rem; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; color: var(--text-secondary);">Connection Status</h3>
+                
+                <!-- Steps Timeline -->
+                <div class="timeline" style="position: relative; padding-left: 2.5rem; display: flex; flex-direction: column; gap: 2rem;">
+                    
+                    <!-- Line connecting nodes -->
+                    <div style="position: absolute; left: 9px; top: 10px; bottom: 10px; width: 2px; background: rgba(0,0,0,0.08); z-index: 1;" id="timeline-connector"></div>
+
+                    <!-- Step 1 -->
+                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="timeline-node" id="node-room" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1); transition: all 0.3s;"></div>
+                        <div>
+                            <h4 style="margin-bottom: 0.1rem; font-size: 0.95rem; font-weight: 700;">Room created</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);" id="room-status-desc">Generating room...</p>
+                        </div>
+                        <span class="status-badge badge-pending" id="badge-room" style="font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 50px; background: rgba(0,0,0,0.05); color: var(--text-muted);">Pending</span>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="timeline-node" id="node-peer" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1); transition: all 0.3s;"></div>
+                        <div>
+                            <h4 style="margin-bottom: 0.1rem; font-size: 0.95rem; font-weight: 700;">Peer connection</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);" id="peer-status-desc">Waiting for receiver to join...</p>
+                        </div>
+                        <span class="status-badge badge-pending" id="badge-peer" style="font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 50px; background: rgba(0,0,0,0.05); color: var(--text-muted);">Waiting</span>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="timeline-node" id="node-channel" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1); transition: all 0.3s;"></div>
+                        <div>
+                            <h4 style="margin-bottom: 0.1rem; font-size: 0.95rem; font-weight: 700;">Data channel</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted);" id="channel-status-desc">Opens after peer joins</p>
+                        </div>
+                        <span class="status-badge badge-pending" id="badge-channel" style="font-size: 0.7rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 50px; background: rgba(0,0,0,0.05); color: var(--text-muted);">Pending</span>
+                    </div>
+
+                </div>
+
+                <!-- Transfer Progress Bar (Sender side) -->
+                <div id="transfer-progress-container" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.5rem; font-weight: 600;">
+                        <span id="transfer-progress-text" style="color: var(--text-primary);">Sending files...</span>
+                        <span id="transfer-progress-percent" style="color: var(--accent-primary-light);">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: var(--bg-base); border-radius: 100px; overflow: hidden; box-shadow: var(--shadow-inset);">
+                        <div id="transfer-progress-bar" class="processing-bar" style="width: 0%; height: 100%; border-radius: 100px; transition: width 0.1s;"></div>
+                    </div>
+                    <div id="transfer-speed" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; text-align: right;">0 KB/s</div>
+                </div>
+            </div>
+
+            <!-- Send File Button -->
+            <button class="btn" id="send-files-btn" disabled onclick="startFileTransfer()" style="width: 100%; padding: 1.1rem; font-size: 1.1rem; opacity: 0.6; cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md);">
+                 🔒 Send files
+            </button>
+            <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; line-height: 1.4;">
+                ⚠️ Keep this tab open. P2P transfers are direct device-to-device. Closing this tab will cancel the share.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Transfer Complete Card (Hidden initially) -->
+<div class="card" id="sender-complete-card" style="display: none; text-align: center; padding: 3rem 2rem; margin-top: 2rem;">
+    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🎉</div>
+    <h3 style="color: var(--accent-success); margin-bottom: 0.5rem; font-size: 1.6rem;">Transfer Complete!</h3>
+    <p style="color: var(--text-muted); font-size: 1rem;">All files were securely sent to the receiver.</p>
+    <div style="margin-top: 2.5rem;">
+        <a href="/p2p" class="btn" style="padding: 0.8rem 2rem; font-size: 1rem;">Close Room</a>
+    </div>
+</div>
+
+<!-- Access Request Prompt Modal (Overlays the page when a receiver knocks) -->
+<div id="request-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; animation: fadeIn 0.3s ease;">
+    <div class="auth-card" style="max-width: 450px; text-align: center; padding: 2.5rem 2rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
+        <h3 style="margin-bottom: 0.5rem; font-size: 1.4rem;">Access Requested</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4;">
+            A user at <strong id="requester-email" style="color: var(--accent-primary-light);">email@example.com</strong> is requesting access to download files from this room.
+        </p>
+        <div style="display: flex; gap: 1rem;">
+            <button class="btn" onclick="handleRequestApproval(true)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">✅ Approve</button>
+            <button class="btn btn-danger" onclick="handleRequestApproval(false)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">❌ Deny</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stylings -->
+<style>
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+.timeline-node-done {
+    background: var(--accent-success) !important;
+}
+.timeline-node-active {
+    background: var(--accent-primary) !important;
+    box-shadow: 0 0 15px var(--accent-glow) !important;
+}
+.badge-done {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: var(--accent-success) !important;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+.badge-active {
+    background: var(--accent-primary-dim) !important;
+    color: var(--accent-primary-light) !important;
+    border: 1px solid rgba(193, 154, 107, 0.2);
+}
+@media (max-width: 768px) {
+    .p2p-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+@media (max-width: 480px) {
+    .qr-card-content {
+        flex-direction: column !important;
+        text-align: center !important;
+    }
+}
+</style>
+
+<!-- P2P WebRTC Sender Javascript -->
+<script>
+let roomCode = null;
+let peerConnection = null;
+let dataChannel = null;
+let currentRequestId = null;
+let pollInterval = null;
+let signalPollInterval = null;
+
+// STUN configuration
+const configuration = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+};
+
+// Setup Navbar connection status and Leave Room button (AirIt Model)
+function setupNavbarStatus() {
+    const navLinks = document.getElementById('nav-links');
+    if (navLinks) {
+        // Remove existing if any
+        const existing = document.getElementById('p2p-navbar-status-container');
+        if (existing) existing.remove();
+
+        const statusContainer = document.createElement('div');
+        statusContainer.style.display = 'flex';
+        statusContainer.style.alignItems = 'center';
+        statusContainer.style.marginRight = '1rem';
+        statusContainer.style.gap = '1rem';
+        statusContainer.id = 'p2p-navbar-status-container';
+
+        statusContainer.innerHTML = `
+            <span id="navbar-status" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; flex-shrink: 0;">
+                <span id="navbar-status-dot" style="color: var(--accent-warning); animation: blink 1.5s infinite;">●</span> <span id="navbar-status-text">Waiting for peer...</span>
+            </span>
+            <a href="/p2p" id="navbar-leave-btn" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border-card); padding: 0.35rem 0.75rem; border-radius: 50px; background: rgba(0,0,0,0.02); transition: all 0.4s; white-space: nowrap; flex-shrink: 0;">
+                <span>🚪</span> Leave room
+            </a>
+        `;
+        
+        navLinks.insertBefore(statusContainer, navLinks.firstChild);
+    }
+}
+
+function updateNavbarStatus(status) {
+    const dot = document.getElementById('navbar-status-dot');
+    const text = document.getElementById('navbar-status-text');
+    if (!dot || !text) return;
+    
+    dot.style.animation = 'none';
+    
+    if (status === 'waiting') {
+        dot.style.color = 'var(--accent-warning)';
+        dot.style.animation = 'blink 1.5s infinite';
+        text.innerText = 'Waiting for peer...';
+    } else if (status === 'connected') {
+        dot.style.color = 'var(--accent-success)';
+        text.innerText = 'Connected';
+    } else if (status === 'transferring') {
+        dot.style.color = 'var(--accent-primary-light)';
+        dot.style.animation = 'blink 1.0s infinite';
+        text.innerText = 'Transferring...';
+    } else if (status === 'disconnected') {
+        dot.style.color = 'var(--accent-danger)';
+        text.innerText = 'Disconnected';
+    }
+}
+
+// Add blinking keyframe animation if not exists
+const styleSheet = document.createElement("style");
+styleSheet.innerText = `
+@keyframes blink {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+`;
+document.head.appendChild(styleSheet);
+
+// Initialize Room
+async function initializeSenderRoom() {
+    setupNavbarStatus();
+    try {
+        const response = await fetch('/api/p2p/create', { method: 'POST' });
+        const data = await response.json();
+        roomCode = data.room_code;
+        
+        // Render room code in UI
+        document.getElementById('room-code-display').innerText = roomCode;
+        
+        // Render QR Code
+        const receiveUrl = window.location.origin + '/p2p/receive?room=' + roomCode;
+        const qrImg = document.getElementById('qr-code-img');
+        qrImg.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(receiveUrl);
+        qrImg.style.display = 'block';
+        document.getElementById('qr-placeholder').style.display = 'none';
+        
+        // Update connection step status
+        updateStep('room', 'done', 'Room created: ' + roomCode);
+        updateStep('peer', 'active', 'Waiting for receiver...');
+        
+        // Start polling for access requests
+        startRequestPolling();
+        
+    } catch (e) {
+        console.error("Room creation error", e);
+        document.getElementById('room-status-desc').innerText = "Failed to create room.";
+        document.getElementById('room-status-desc').style.color = "var(--accent-danger)";
+    }
+}
+
+// Update UI Timeline Steps
+function updateStep(stepName, status, text) {
+    const node = document.getElementById('node-' + stepName);
+    const badge = document.getElementById('badge-' + stepName);
+    const desc = document.getElementById(stepName + '-status-desc');
+    
+    if (desc && text) desc.innerText = text;
+    
+    // Reset classes
+    node.className = 'timeline-node';
+    badge.className = 'status-badge';
+    
+    if (status === 'done') {
+        node.classList.add('timeline-node-done');
+        badge.innerText = 'Done';
+        badge.classList.add('badge-done');
+    } else if (status === 'active') {
+        node.classList.add('timeline-node-active');
+        badge.innerText = 'Active';
+        badge.classList.add('badge-active');
+    } else {
+        badge.innerText = 'Pending';
+        badge.classList.add('badge-pending');
+    }
+}
+
+// Copy Receive Link to Clipboard
+function copyReceiveLink() {
+    if (!roomCode) return;
+    const url = window.location.origin + '/p2p/receive?room=' + roomCode;
+    
+    navigator.clipboard.writeText(url).then(() => {
+        const copyBtn = document.getElementById('copy-link-btn');
+        const origText = copyBtn.innerText;
+        copyBtn.innerText = 'Copied! ✅';
+        copyBtn.style.background = 'var(--accent-success)';
+        
+        setTimeout(() => {
+            copyBtn.innerText = origText;
+            copyBtn.style.background = 'var(--accent-primary)';
+        }, 2000);
+    }).catch(err => {
+        console.error('Could not copy text: ', err);
+    });
+}
+
+// File Drag & Drop Handling
+const fileInput = document.getElementById('p2p-file-input');
+const dropZone = document.getElementById('drop-zone');
+
+fileInput.addEventListener('change', handleFileSelect);
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--accent-primary)';
+    dropZone.style.background = 'var(--accent-primary-dim)';
+});
+dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = 'var(--border-card)';
+    dropZone.style.background = 'var(--bg-base)';
+});
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = 'var(--border-card)';
+    dropZone.style.background = 'var(--bg-base)';
+    
+    if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelect();
+    }
+});
+
+let activeFiles = [];
+
+function handleFileSelect() {
+    if (fileInput.files.length > 0) {
+        const newFiles = Array.from(fileInput.files);
+        activeFiles = activeFiles.concat(newFiles);
+        
+        renderSelectedFiles();
+        registerFilesOnBackend();
+        checkSendButtonState();
+    }
+}
+
+function renderSelectedFiles() {
+    const container = document.getElementById('selected-files-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    activeFiles.forEach((file, index) => {
+        container.innerHTML += `
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); box-shadow: none;">
+                <span style="font-size: 1.7rem;">📄</span>
+                <div style="flex: 1; min-width: 0; text-align: left;">
+                    <div style="font-weight: 600; font-size: 0.85rem; word-break: break-all; color: var(--text-primary);">${file.name}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">${formatBytes(file.size)}</div>
+                </div>
+                <button onclick="removeSelectedFile(${index})" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--accent-danger); padding: 0.25rem;">×</button>
+            </div>
+        `;
+    });
+    
+    document.getElementById('selected-file-card').style.display = activeFiles.length > 0 ? 'block' : 'none';
+}
+
+function removeSelectedFile(index) {
+    activeFiles.splice(index, 1);
+    renderSelectedFiles();
+    registerFilesOnBackend();
+    checkSendButtonState();
+}
+
+function clearSelectedFile() {
+    activeFiles = [];
+    fileInput.value = '';
+    renderSelectedFiles();
+    registerFilesOnBackend();
+    checkSendButtonState();
+}
+
+function registerFilesOnBackend() {
+    if (!roomCode) return;
+    
+    const filesInfo = activeFiles.map(f => ({ filename: f.name, size: f.size }));
+    
+    fetch('/api/p2p/register_files/' + roomCode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            files: filesInfo
+        })
+    }).catch(e => console.error("Error registering files metadata", e));
+}
+
+function checkSendButtonState() {
+    const btn = document.getElementById('send-files-btn');
+    if (activeFiles.length > 0 && dataChannel && dataChannel.readyState === 'open') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        btn.style.cursor = 'not-allowed';
+    }
+}
+
+// Request Polling
+function startRequestPolling() {
+    pollInterval = setInterval(async () => {
+        try {
+            const res = await fetch('/api/p2p/check_requests/' + roomCode, { cache: 'no-store' });
+            if (!res.ok) {
+                if (res.status === 404) {
+                    console.error("Room not found on server. It may have expired or the server restarted.");
+                    clearInterval(pollInterval);
+                    updateNavbarStatus('disconnected');
+                    // Auto-recreate the room
+                    await initializeSenderRoom();
+                }
+                return;
+            }
+            const data = await res.json();
+            if (data.requests && data.requests.length > 0) {
+                // Take the first pending request
+                const req = data.requests[0];
+                currentRequestId = req.id;
+                document.getElementById('requester-email').innerText = req.email;
+                document.getElementById('request-modal').style.display = 'flex';
+                
+                // Pause request polling
+                clearInterval(pollInterval);
+            }
+        } catch (e) {
+            console.error("Error checking requests", e);
+        }
+    }, 1500);
+}
+
+// Approve / Deny Connection Request
+async function handleRequestApproval(approved) {
+    if (!roomCode || !currentRequestId) return;
+    
+    document.getElementById('request-modal').style.display = 'none';
+    const status = approved ? 'approved' : 'denied';
+    
+    try {
+        await fetch(`/api/p2p/approve_request/${roomCode}/${currentRequestId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        });
+        
+        if (approved) {
+            updateStep('peer', 'active', 'Connecting to recipient...');
+            startSignalPolling();
+        } else {
+            // Resume polling requests
+            startRequestPolling();
+        }
+    } catch (e) {
+        console.error("Error updating request", e);
+        startRequestPolling();
+    }
+}
+
+// Signaling Polling
+function startSignalPolling() {
+    signalPollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/p2p/signal/${roomCode}/receive?role=sender`, { cache: 'no-store' });
+            const data = await response.json();
+            
+            for (let msg of data.messages) {
+                handleSignalMessage(msg);
+            }
+        } catch (e) {
+            console.error("Error polling signals", e);
+        }
+    }, 1000);
+}
+
+// Handle WebRTC signaling messages
+async function handleSignalMessage(msg) {
+    if (msg.type === 'join') {
+        console.log("Receiver joined signaling, starting WebRTC...");
+        initializeWebRTC();
+    } else if (msg.type === 'answer') {
+        console.log("Received answer, setting remote description...");
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+    } else if (msg.type === 'candidate') {
+        console.log("Received candidate, adding...");
+        if (msg.candidate) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+    }
+}
+
+// Send Signal message to the recipient via server mailbox
+async function sendSignal(message) {
+    try {
+        await fetch(`/api/p2p/signal/${roomCode}/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                role: 'sender',
+                message: message
+            })
+        });
+    } catch (e) {
+        console.error("Error sending signal", e);
+    }
+}
+
+// WebRTC Initialization
+async function initializeWebRTC() {
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    // Create Data Channel
+    dataChannel = peerConnection.createDataChannel("file-transfer", {
+        ordered: true
+    });
+    
+    setupDataChannelHandlers();
+    
+    // Handle ICE Candidates
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            sendSignal({
+                type: 'candidate',
+                candidate: event.candidate
+            });
+        }
+    };
+    
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log("ICE state changed:", peerConnection.iceConnectionState);
+        if (peerConnection.iceConnectionState === 'connected') {
+            updateStep('peer', 'done', 'Connected');
+            updateStep('channel', 'active', 'Opening data channel...');
+        } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
+            handleDisconnect();
+        }
+    };
+    
+    // Create Offer
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+    
+    sendSignal({
+        type: 'offer',
+        sdp: offer
+    });
+}
+
+function setupDataChannelHandlers() {
+    dataChannel.onopen = () => {
+        console.log("Data channel is OPEN");
+        updateStep('channel', 'done', 'Open (Ready)');
+        updateNavbarStatus('connected');
+        checkSendButtonState();
+        
+        // Stop signaling poll interval since connection is fully active
+        clearInterval(signalPollInterval);
+    };
+    
+    dataChannel.onclose = () => {
+        console.log("Data channel is CLOSED");
+        updateNavbarStatus('disconnected');
+        handleDisconnect();
+    };
+    
+    dataChannel.onerror = (e) => {
+        console.error("Data channel error:", e);
+    };
+    
+    dataChannel.onmessage = (event) => {
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'ready_for_file') {
+                console.log("Receiver is ready for file. Starting chunk transmission...");
+                transmitFileChunks();
+            } else if (msg.type === 'file_received') {
+                console.log("Receiver acknowledged file receipt. Moving to next file...");
+                currentFileIndex++;
+                sendNextFileInQueue();
+            }
+        } catch (e) {
+            console.error("Error parsing message on sender:", e);
+        }
+    };
+}
+
+function handleDisconnect() {
+    updateStep('peer', 'active', 'Waiting for receiver...');
+    updateStep('channel', 'pending', 'Opens after peer joins');
+    updateNavbarStatus('waiting');
+    
+    if (peerConnection) {
+        peerConnection.close();
+        peerConnection = null;
+    }
+    dataChannel = null;
+    checkSendButtonState();
+    
+    // Resume polling for new joiners or requests
+    clearInterval(signalPollInterval);
+    clearInterval(pollInterval);
+    startRequestPolling();
+}
+
+let currentFileIndex = 0;
+
+function startFileTransfer() {
+    if (activeFiles.length === 0 || !dataChannel || dataChannel.readyState !== 'open') return;
+    
+    document.getElementById('send-files-btn').disabled = true;
+    document.getElementById('send-files-btn').style.opacity = '0.6';
+    
+    currentFileIndex = 0;
+    sendNextFileInQueue();
+}
+
+function sendNextFileInQueue() {
+    if (currentFileIndex >= activeFiles.length) {
+        // All files sent!
+        dataChannel.send(JSON.stringify({ type: 'all_done' }));
+        
+        const statusText = document.getElementById('transfer-progress-text');
+        statusText.innerText = "All files sent successfully! 🎉";
+        statusText.style.color = "var(--accent-success)";
+        document.getElementById('transfer-progress-bar').classList.remove('processing-bar');
+        document.getElementById('transfer-progress-bar').classList.add('processing-bar-success');
+        updateNavbarStatus('connected');
+        
+        setTimeout(() => {
+            document.getElementById('sender-main-grid').style.display = 'none';
+            document.getElementById('sender-complete-card').style.display = 'block';
+        }, 1500);
+        return;
+    }
+    
+    const file = activeFiles[currentFileIndex];
+    
+    // Show progress bar
+    const progressContainer = document.getElementById('transfer-progress-container');
+    const progressBar = document.getElementById('transfer-progress-bar');
+    const percentText = document.getElementById('transfer-progress-percent');
+    const speedText = document.getElementById('transfer-speed');
+    const statusText = document.getElementById('transfer-progress-text');
+    
+    progressContainer.style.display = 'block';
+    statusText.innerText = `Sending (${currentFileIndex + 1}/${activeFiles.length}): ${file.name}`;
+    statusText.style.color = "var(--text-primary)";
+    progressBar.style.width = '0%';
+    percentText.innerText = '0%';
+    updateNavbarStatus('transferring');
+    
+    // Send File Metadata
+    dataChannel.send(JSON.stringify({
+        type: 'metadata',
+        filename: file.name,
+        size: file.size,
+        mime: file.type,
+        fileIndex: currentFileIndex,
+        totalFiles: activeFiles.length
+    }));
+}
+
+function transmitFileChunks() {
+    const file = activeFiles[currentFileIndex];
+    const progressBar = document.getElementById('transfer-progress-bar');
+    const percentText = document.getElementById('transfer-progress-percent');
+    const speedText = document.getElementById('transfer-speed');
+    const statusText = document.getElementById('transfer-progress-text');
+    
+    const chunkSize = 16384; // 16KB safe chunk size
+    let offset = 0;
+    const fileReader = new FileReader();
+    const startTime = Date.now();
+    
+    function sendNextChunk() {
+        if (dataChannel.readyState !== 'open') {
+            statusText.innerText = "Connection lost. Transfer failed.";
+            statusText.style.color = "var(--accent-danger)";
+            updateNavbarStatus('disconnected');
+            return;
+        }
+        
+        const slice = file.slice(offset, offset + chunkSize);
+        fileReader.readAsArrayBuffer(slice);
+    }
+    
+    fileReader.onload = (e) => {
+        const buffer = e.target.result;
+        dataChannel.send(buffer);
+        offset += buffer.byteLength;
+        
+        // Calculate progress percentage
+        const progress = Math.min((offset / file.size) * 100, 100);
+        progressBar.style.width = progress + '%';
+        percentText.innerText = Math.round(progress) + '%';
+        
+        // Calculate speed
+        const timeElapsed = (Date.now() - startTime) / 1000; // seconds
+        if (timeElapsed > 0) {
+            const speedBytes = offset / timeElapsed;
+            speedText.innerText = formatSpeed(speedBytes);
+        }
+        
+        if (offset < file.size) {
+            // Buffer size management to prevent backpressure
+            if (dataChannel.bufferedAmount > 1048576) { // 1MB buffer limit
+                setTimeout(sendNextChunk, 20);
+            } else {
+                sendNextChunk();
+            }
+        } else {
+            // Send file complete signal
+            dataChannel.send(JSON.stringify({ type: 'file_done', fileIndex: currentFileIndex }));
+        }
+    };
+    
+    sendNextChunk();
+}
+
+// Utility formatting functions
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+function formatSpeed(bytesPerSecond) {
+    const mb = bytesPerSecond / (1024 * 1024);
+    if (mb >= 1) return mb.toFixed(2) + ' MB/s';
+    return (bytesPerSecond / 1024).toFixed(1) + ' KB/s';
+}
+
+// Auto-run on page load
+window.onload = initializeSenderRoom;
+</script>
+{% endblock %}

@@ -7,6 +7,23 @@
     <meta name="description" content="Share files securely with end-to-end encryption, expiring links, and access control.">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+        const originalFetch = window.fetch;
+        window.fetch = function() {
+            let [resource, config] = arguments;
+            if(config === undefined) {
+                config = {};
+            }
+            if(config.method && config.method.toUpperCase() !== 'GET' && config.method.toUpperCase() !== 'HEAD') {
+                config.headers = config.headers || {};
+                config.headers['X-CSRFToken'] = csrfToken;
+            }
+            return originalFetch(resource, config);
+        };
+    </script>
 </head>
 <body>
     <!-- Ambient glow orbs -->
@@ -21,6 +38,9 @@
                 <span class="brand-text">Secure<span class="brand-accent">Share</span></span>
             </a>
             <div class="nav-links" id="nav-links">
+                <a href="/p2p" class="nav-link" id="nav-p2p" style="margin-right: 0.5rem; color: var(--accent-primary-light); font-weight: 600;">
+                    <span class="nav-icon">⚡</span> P2P Share
+                </a>
                 {% if session.get('user_id') %}
                     <a href="/dashboard" class="nav-link" id="nav-dashboard">
                         <span class="nav-icon">📁</span> Dashboard

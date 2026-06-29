@@ -8,11 +8,12 @@
             <p>Your file will be encrypted and stored securely.</p>
         </div>
         <form method="post" enctype="multipart/form-data" id="upload-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="file-upload-wrapper">
-                <input type="file" name="file" required id="upload-file-input" class="premium-file-input">
+                <input type="file" name="file" required id="upload-file-input" class="premium-file-input" onchange="document.getElementById('upload-main-text').innerText = this.files.length ? this.files[0].name : 'Click to select a file';">
                 <div class="file-upload-display">
                     <div class="upload-icon-large">☁️</div>
-                    <div class="upload-text-main">Click to select a file</div>
+                    <div class="upload-text-main" id="upload-main-text">Click to select a file</div>
                     <div class="upload-text-sub">Securely encrypted before upload</div>
                 </div>
             </div>
@@ -22,4 +23,72 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.getElementById('upload-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fileInput = document.getElementById('upload-file-input');
+        if (!fileInput.files.length) return;
+        
+        const file = fileInput.files[0];
+        const submitBtn = document.getElementById('upload-submit');
+        submitBtn.disabled = true;
+        submitBtn.innerText = '🔒 Encrypting...';
+        
+        try {
+            // 1. Generate AES-GCM Key
+            const key = await crypto.subtle.generateKey(
+                { name: "AES-GCM", length: 256 },
+                true,
+                ["encrypt", "decrypt"]
+            );
+            
+            // 2. Export key to Base64 to save later
+            const rawKey = await crypto.subtle.exportKey("raw", key);
+            const keyBase64 = btoa(String.fromCharCode(...new Uint8Array(rawKey)));
+            
+            // 3. Encrypt file content
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const fileBuffer = await file.arrayBuffer();
+            const encryptedContent = await crypto.subtle.encrypt(
+                { name: "AES-GCM", iv: iv },
+                key,
+                fileBuffer
+            );
+            
+            // 4. Combine IV and encrypted content
+            const combinedBuffer = new Uint8Array(iv.length + encryptedContent.byteLength);
+            combinedBuffer.set(iv, 0);
+            combinedBuffer.set(new Uint8Array(encryptedContent), iv.length);
+            const encryptedBlob = new Blob([combinedBuffer], { type: file.type });
+            
+            // 5. Upload to Server
+            submitBtn.innerText = '☁️ Uploading...';
+            const formData = new FormData();
+            formData.append('file', encryptedBlob, file.name);
+            formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
+            
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await res.json();
+            
+            if (result.success) {
+                // 6. Save key in local storage so owner can decrypt it later
+                localStorage.setItem('e2e_key_' + result.file_id, keyBase64);
+                window.location.href = '/dashboard';
+            } else {
+                alert('Upload failed: ' + result.error);
+                submitBtn.disabled = false;
+                submitBtn.innerText = '🔒 Encrypt & Upload';
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Encryption failed!');
+            submitBtn.disabled = false;
+            submitBtn.innerText = '🔒 Encrypt & Upload';
+        }
+    });
+</script>
 {% endblock %}

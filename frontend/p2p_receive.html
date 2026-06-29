@@ -1,0 +1,762 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="max-width: 600px; margin: 0 auto;">
+    
+    <!-- Header with Receiver badge -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; gap: 1rem;">
+        <div style="min-width: 0;">
+            <h2 style="margin-bottom: 0;">Receive files</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.2rem; word-wrap: break-word;">Connect to a sender room to download files directly.</p>
+        </div>
+        <span class="role-badge" style="background: rgba(52, 211, 153, 0.1); color: var(--accent-success); padding: 0.5rem 1.2rem; border-radius: 100px; font-weight: 700; font-size: 0.85rem; border: 1px solid rgba(52, 211, 153, 0.25); white-space: nowrap; flex-shrink: 0;">● Receiver</span>
+    </div>
+
+    <!-- Step 1: Room Code Entry Card (Hidden if room code pre-filled via URL) -->
+    <div class="card {% if room_code %}d-none{% endif %}" id="join-room-card" style="margin-bottom: 1.5rem;">
+        <div class="auth-header" style="text-align: left; margin-bottom: 1.5rem;">
+            <h3>Join Sharing Room</h3>
+            <p>Enter the 6-character room code shared by the sender.</p>
+        </div>
+        <form onsubmit="handleJoinSubmit(event)">
+            <input type="text" id="input-room-code" placeholder="Enter Room Code (e.g. 5F5CE6)" required style="text-transform: uppercase; font-family: monospace; font-size: 1.3rem; letter-spacing: 0.15em; text-align: center; font-weight: 700;" maxlength="6">
+            <button class="btn" type="submit" style="width: 100%; padding: 1.1rem; font-size: 1.05rem;">
+                Join Room
+            </button>
+            <div id="join-error" style="color: var(--accent-danger); font-size: 0.85rem; margin-top: 0.75rem; font-weight: 600; text-align: center; display: none;"></div>
+        </form>
+    </div>
+
+    <!-- Step 2: Email Authorization Card (Visible after room code is entered/validated) -->
+    <div class="card {% if not room_code %}d-none{% endif %}" id="email-auth-card" style="margin-bottom: 1.5rem;">
+        <div class="auth-header" style="text-align: left; margin-bottom: 1.5rem;">
+            <h3>Request Access</h3>
+            <p>Enter your email to request access to the shared files in room <strong id="active-room-label" style="color: var(--accent-primary-light);">{{ room_code }}</strong>.</p>
+        </div>
+        <form onsubmit="handleEmailSubmit(event)">
+            <input type="email" id="input-email" placeholder="your.email@example.com" required style="font-size: 1rem;">
+            <button class="btn" type="submit" style="width: 100%; padding: 1.1rem; font-size: 1.05rem;">
+                Request Entry
+            </button>
+        </form>
+    </div>
+
+    <!-- Step 3: Waiting for Approval Card -->
+    <div class="card" id="waiting-approval-card" style="display: none; text-align: center; padding: 3rem 2rem;">
+        <div class="spinner-icon" style="font-size: 3rem; margin-bottom: 1.5rem; animation: spin 2s linear infinite; display: inline-block;">🔒</div>
+        <h3>Waiting for Sender Approval</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4;">
+            Your request has been sent. Please wait for the sender to approve your access request on their screen.
+        </p>
+        <div style="margin-top: 1.5rem; font-size: 0.8rem; background: var(--bg-base); padding: 0.6rem; border-radius: var(--radius-sm); color: var(--text-secondary); display: inline-block;">
+            Requester: <span id="display-requester-email" style="font-weight: 600;">email@example.com</span>
+        </div>
+    </div>
+
+    <!-- Step 3.5: Save Directory Selector Card (AirIt Model) -->
+    <div class="card" id="save-directory-card" style="display: none; text-align: center; padding: 2.5rem 2rem; margin-bottom: 1.5rem;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📁</div>
+        <h3>Select Save Folder</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; line-height: 1.4; margin-bottom: 1.5rem;">
+            To support transferring **multiple files** and **unlimited file sizes** directly to your device, please select a folder to save the files.
+        </p>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+            <button class="btn" onclick="selectSaveDirectory()" style="width: 100%; padding: 1rem; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md);">
+                📂 Select Save Folder
+            </button>
+            <button class="btn btn-outline" onclick="skipSaveDirectory()" style="width: 100%; padding: 1rem; font-size: 0.95rem; border-radius: var(--radius-md); border-color: var(--accent-primary); color: var(--accent-primary-light);">
+                Use Default Downloads (In-Memory Fallback)
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 4: Connection & Progress Card -->
+    <div class="card" id="connection-progress-card" style="display: none; padding: 2rem; margin-bottom: 1.5rem;">
+        <h3 style="font-size: 1.1rem; margin-bottom: 1.5rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; color: var(--text-secondary);">Connecting to Sender</h3>
+        
+        <!-- Connection steps -->
+        <div class="timeline" style="position: relative; padding-left: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem;">
+            <div style="position: absolute; left: 9px; top: 10px; bottom: 10px; width: 2px; background: rgba(0,0,0,0.08); z-index: 1;"></div>
+
+            <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                <div class="timeline-node timeline-node-done" id="node-rx-room" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--accent-success); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1);"></div>
+                <div>
+                    <h4 style="margin-bottom: 0.1rem; font-size: 0.9rem; font-weight: 700;">Approved</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);">Access granted by owner</p>
+                </div>
+                <span class="status-badge badge-done" style="font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 50px;">Done</span>
+            </div>
+
+            <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                <div class="timeline-node" id="node-rx-peer" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1); transition: all 0.3s;"></div>
+                <div>
+                    <h4 style="margin-bottom: 0.1rem; font-size: 0.9rem; font-weight: 700;">Peer connection</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);" id="rx-peer-status-desc">Connecting...</p>
+                </div>
+                <span class="status-badge badge-pending" id="badge-rx-peer" style="font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 50px;">Pending</span>
+            </div>
+
+            <div style="position: relative; z-index: 2; display: flex; justify-content: space-between; align-items: center;">
+                <div class="timeline-node" id="node-rx-channel" style="position: absolute; left: -2.5rem; width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); border: 4px solid var(--bg-card); box-shadow: 0 0 0 1px rgba(0,0,0,0.1); transition: all 0.3s;"></div>
+                <div>
+                    <h4 style="margin-bottom: 0.1rem; font-size: 0.9rem; font-weight: 700;">Data channel</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);" id="rx-channel-status-desc">Waiting for peer</p>
+                </div>
+                <span class="status-badge badge-pending" id="badge-rx-channel" style="font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 50px;">Pending</span>
+            </div>
+        </div>
+
+        <!-- Progress bar for active downloading -->
+        <div id="rx-progress-container" style="display: none; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-subtle);">
+            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 0.5rem; font-weight: 600;">
+                <span id="rx-progress-text" style="color: var(--text-primary);">Receiving files...</span>
+                <span id="rx-progress-percent" style="color: var(--accent-primary-light);">0%</span>
+            </div>
+            <div style="width: 100%; height: 8px; background: var(--bg-base); border-radius: 100px; overflow: hidden; box-shadow: var(--shadow-inset);">
+                <div id="rx-progress-bar" class="processing-bar" style="width: 0%; height: 100%; border-radius: 100px; transition: width 0.1s;"></div>
+            </div>
+            <div id="rx-speed" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; text-align: right;">0 KB/s</div>
+        </div>
+    </div>
+
+    <!-- Step 5: Transfer Success / Download Ready Card -->
+    <div class="card" id="download-ready-card" style="display: none; text-align: center; padding: 2.5rem 2rem;">
+        <div style="font-size: 3.5rem; margin-bottom: 1rem;">📦</div>
+        <h3 style="color: var(--accent-success);">Transfer Complete!</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">Your files were securely sent directly over P2P.</p>
+        
+        <!-- File details list -->
+        <div id="download-file-list-container" style="background: var(--bg-base); padding: 1.25rem; border-radius: var(--radius-md); text-align: left; margin: 1.5rem 0; border: 1px solid var(--border-card); box-shadow: var(--shadow-inset); max-height: 250px; overflow-y: auto;">
+             <!-- Will be populated dynamically with file list or directory confirmation -->
+        </div>
+
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn" id="save-file-btn" onclick="saveAllReceivedFiles()" style="flex: 2; padding: 1rem; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                💾 Save All Files
+            </button>
+            <button class="btn btn-outline" id="preview-file-btn" onclick="previewReceivedFile()" style="flex: 1; padding: 1rem; font-size: 1rem; display: none; align-items: center; justify-content: center;">
+                👁️ Preview Last
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 6: Inline Secure Preview Container -->
+    <div class="card" id="inline-preview-card" style="display: none; margin-top: 1.5rem; text-align: center; padding: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h4 style="margin: 0; font-size: 1rem;">Secure Preview</h4>
+            <button onclick="closeInlinePreview()" style="background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted); font-weight: 800;">Close</button>
+        </div>
+        <div id="preview-container" style="background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); overflow: auto; max-height: 400px; display: flex; align-items: center; justify-content: center;">
+            <!-- Render dynamically -->
+        </div>
+    </div>
+
+</div>
+
+<!-- Stylings -->
+<style>
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+.timeline-node-done {
+    background: var(--accent-success) !important;
+}
+.timeline-node-active {
+    background: var(--accent-primary) !important;
+    box-shadow: 0 0 15px var(--accent-glow) !important;
+}
+.badge-done {
+    background: rgba(52, 211, 153, 0.15) !important;
+    color: var(--accent-success) !important;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+.badge-active {
+    background: var(--accent-primary-dim) !important;
+    color: var(--accent-primary-light) !important;
+    border: 1px solid rgba(193, 154, 107, 0.2);
+}
+.d-none {
+    display: none !important;
+}
+</style>
+
+<!-- P2P WebRTC Receiver Javascript -->
+<script>
+// Setup Navbar connection status and Leave Room button (AirIt Model)
+function setupNavbarStatus() {
+    const navLinks = document.getElementById('nav-links');
+    if (navLinks) {
+        // Remove existing if any
+        const existing = document.getElementById('p2p-navbar-status-container');
+        if (existing) existing.remove();
+
+        const statusContainer = document.createElement('div');
+        statusContainer.style.display = 'flex';
+        statusContainer.style.alignItems = 'center';
+        statusContainer.style.marginRight = '1rem';
+        statusContainer.style.gap = '1rem';
+        statusContainer.id = 'p2p-navbar-status-container';
+
+        statusContainer.innerHTML = `
+            <span id="navbar-status" style="font-size: 0.8rem; color: var(--text-muted); display: flex; align-items: center; gap: 0.35rem; font-weight: 600; white-space: nowrap; flex-shrink: 0;">
+                <span id="navbar-status-dot" style="color: var(--accent-warning); animation: blink 1.5s infinite;">●</span> <span id="navbar-status-text">Waiting for approval...</span>
+            </span>
+            <a href="/p2p" id="navbar-leave-btn" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border-card); padding: 0.35rem 0.75rem; border-radius: 50px; background: rgba(0,0,0,0.02); transition: all 0.4s; white-space: nowrap; flex-shrink: 0;">
+                <span>🚪</span> Leave room
+            </a>
+        `;
+        
+        navLinks.insertBefore(statusContainer, navLinks.firstChild);
+    }
+}
+
+function updateNavbarStatus(status) {
+    const dot = document.getElementById('navbar-status-dot');
+    const text = document.getElementById('navbar-status-text');
+    if (!dot || !text) return;
+    
+    dot.style.animation = 'none';
+    
+    if (status === 'waiting') {
+        dot.style.color = 'var(--accent-warning)';
+        dot.style.animation = 'blink 1.5s infinite';
+        text.innerText = 'Waiting for peer...';
+    } else if (status === 'connected') {
+        dot.style.color = 'var(--accent-success)';
+        text.innerText = 'Connected';
+    } else if (status === 'transferring') {
+        dot.style.color = 'var(--accent-primary-light)';
+        dot.style.animation = 'blink 1.0s infinite';
+        text.innerText = 'Transferring...';
+    } else if (status === 'disconnected') {
+        dot.style.color = 'var(--accent-danger)';
+        text.innerText = 'Disconnected';
+    }
+}
+
+// Add blinking keyframe animation if not exists
+const styleSheet = document.createElement("style");
+styleSheet.innerText = `
+@keyframes blink {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+`;
+document.head.appendChild(styleSheet);
+
+let roomCode = "{{ room_code }}";
+let requesterEmail = null;
+let requestId = null;
+let pollApprovalInterval = null;
+let peerConnection = null;
+let dataChannel = null;
+let signalPollInterval = null;
+
+// File receiver variables
+let fileMetadata = null;
+let receivedChunks = [];
+let receivedSize = 0;
+let fileBlob = null;
+let transferStartTime = null;
+let directoryHandle = null;
+let receivedFilesList = [];
+let fileWritable = null;
+
+// STUN configuration
+const configuration = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+    ]
+};
+
+// Handle Join submit (Validate with server)
+async function handleJoinSubmit(e) {
+    e.preventDefault();
+    const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+    const errorDiv = document.getElementById('join-error');
+    if (errorDiv) errorDiv.style.display = 'none';
+    
+    if (code.length === 6) {
+        try {
+            const response = await fetch('/api/p2p/room_info/' + code);
+            if (response.ok) {
+                roomCode = code;
+                document.getElementById('active-room-label').innerText = roomCode;
+                document.getElementById('join-room-card').classList.add('d-none');
+                document.getElementById('email-auth-card').classList.remove('d-none');
+                
+                // Update URL parameter without reload
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + roomCode;
+                window.history.pushState({ path: newUrl }, '', newUrl);
+            } else {
+                if (errorDiv) {
+                    errorDiv.innerText = "Room not found or expired. Please check the code.";
+                    errorDiv.style.display = 'block';
+                }
+            }
+        } catch (err) {
+            console.error("Error validating room", err);
+            if (errorDiv) {
+                errorDiv.innerText = "Error connecting to server. Please try again.";
+                errorDiv.style.display = 'block';
+            }
+        }
+    }
+}
+
+// Handle Email request submit
+async function handleEmailSubmit(e) {
+    e.preventDefault();
+    requesterEmail = document.getElementById('input-email').value.trim();
+    if (!requesterEmail || !roomCode) return;
+    
+    document.getElementById('display-requester-email').innerText = requesterEmail;
+    document.getElementById('email-auth-card').classList.add('d-none');
+    document.getElementById('waiting-approval-card').style.display = 'block';
+    
+    setupNavbarStatus();
+    
+    try {
+        const response = await fetch('/api/p2p/request_access/' + roomCode, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: requesterEmail })
+        });
+        
+        const data = await response.json();
+        if (data.error) {
+            alert(data.error);
+            document.getElementById('email-auth-card').classList.remove('d-none');
+            document.getElementById('waiting-approval-card').style.display = 'none';
+            return;
+        }
+        
+        requestId = data.request_id;
+        startApprovalPolling();
+    } catch (e) {
+        console.error("Access request error", e);
+        alert("Error requesting access. Please verify room code.");
+        document.getElementById('email-auth-card').classList.remove('d-none');
+        document.getElementById('waiting-approval-card').style.display = 'none';
+    }
+}
+
+// Poll Approval Status
+function startApprovalPolling() {
+    pollApprovalInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/p2p/check_approval/${roomCode}/${requestId}`, { cache: 'no-store' });
+            const data = await response.json();
+            
+            if (data.status === 'approved') {
+                clearInterval(pollApprovalInterval);
+                document.getElementById('waiting-approval-card').style.display = 'none';
+                
+                // If browser supports showDirectoryPicker, ask them to select a folder
+                if (window.showDirectoryPicker) {
+                    document.getElementById('save-directory-card').style.display = 'block';
+                } else {
+                    // Fallback directly to connection since picker is not supported
+                    document.getElementById('connection-progress-card').style.display = 'block';
+                    initializeReceiverWebRTC();
+                }
+            } else if (data.status === 'denied') {
+                clearInterval(pollApprovalInterval);
+                alert("Access request was denied by the sender.");
+                window.location.reload();
+            }
+        } catch (e) {
+            console.error("Error polling approval status", e);
+        }
+    }, 1500);
+}
+
+// Initialize Receiver WebRTC
+async function initializeReceiverWebRTC() {
+    peerConnection = new RTCPeerConnection(configuration);
+    
+    updateStep('rx-peer', 'active', 'Setting up peer connection...');
+    
+    peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            sendSignal({
+                type: 'candidate',
+                candidate: event.candidate
+            });
+        }
+    };
+    
+    peerConnection.oniceconnectionstatechange = () => {
+        console.log("ICE state changed (Rx):", peerConnection.iceConnectionState);
+        if (peerConnection.iceConnectionState === 'connected') {
+            updateStep('rx-peer', 'done', 'Connected');
+            updateStep('rx-channel', 'active', 'Waiting for data channel...');
+        } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
+            alert("Connection lost. Resetting.");
+            window.location.reload();
+        }
+    };
+    
+    // Listen for data channel from Sender
+    peerConnection.ondatachannel = (event) => {
+        console.log("Received data channel");
+        dataChannel = event.channel;
+        setupDataChannelHandlers();
+    };
+    
+    // Send join message to start signaling
+    await sendSignal({ type: 'join' });
+    
+    // Start signaling poll
+    startSignalPolling();
+}
+
+// Update UI Timeline Steps (Rx)
+function updateStep(stepName, status, text) {
+    const node = document.getElementById('node-' + stepName);
+    const badge = document.getElementById('badge-' + stepName);
+    const desc = document.getElementById(stepName + '-status-desc');
+    
+    if (desc && text) desc.innerText = text;
+    if (!node || !badge) return;
+    
+    node.className = 'timeline-node';
+    badge.className = 'status-badge';
+    
+    if (status === 'done') {
+        node.classList.add('timeline-node-done');
+        badge.innerText = 'Done';
+        badge.classList.add('badge-done');
+    } else if (status === 'active') {
+        node.classList.add('timeline-node-active');
+        badge.innerText = 'Active';
+        badge.classList.add('badge-active');
+    } else {
+        badge.innerText = 'Pending';
+        badge.classList.add('badge-pending');
+    }
+}
+
+// Send Signal message to the sender via server mailbox
+async function sendSignal(message) {
+    try {
+        await fetch(`/api/p2p/signal/${roomCode}/send`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                role: 'receiver',
+                message: message
+            })
+        });
+    } catch (e) {
+        console.error("Error sending signal", e);
+    }
+}
+
+// Signaling Polling (Rx)
+function startSignalPolling() {
+    signalPollInterval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/p2p/signal/${roomCode}/receive?role=receiver`, { cache: 'no-store' });
+            const data = await response.json();
+            
+            for (let msg of data.messages) {
+                handleSignalMessage(msg);
+            }
+        } catch (e) {
+            console.error("Error polling signals", e);
+        }
+    }, 1000);
+}
+
+// Handle WebRTC signaling messages (Rx)
+async function handleSignalMessage(msg) {
+    if (msg.type === 'offer') {
+        console.log("Received offer, creating answer...");
+        await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        const answer = await peerConnection.createAnswer();
+        await peerConnection.setLocalDescription(answer);
+        
+        sendSignal({
+            type: 'answer',
+            sdp: answer
+        });
+    } else if (msg.type === 'candidate') {
+        console.log("Received candidate, adding...");
+        if (msg.candidate) {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+        }
+    }
+}
+
+async function selectSaveDirectory() {
+    try {
+        directoryHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        console.log("Selected directory:", directoryHandle.name);
+        
+        // Transition to connection progress card
+        document.getElementById('save-directory-card').style.display = 'none';
+        document.getElementById('connection-progress-card').style.display = 'block';
+        
+        // Initialize WebRTC
+        initializeReceiverWebRTC();
+    } catch (e) {
+        console.error("Directory picker error or cancelled:", e);
+        alert("Could not access directory. You can choose the default downloads option instead.");
+    }
+}
+
+function skipSaveDirectory() {
+    directoryHandle = null;
+    
+    // Transition to connection progress card
+    document.getElementById('save-directory-card').style.display = 'none';
+    document.getElementById('connection-progress-card').style.display = 'block';
+    
+    // Initialize WebRTC
+    initializeReceiverWebRTC();
+}
+
+// Setup Data Channel event handlers
+function setupDataChannelHandlers() {
+    dataChannel.onopen = () => {
+        console.log("Data channel is OPEN (Rx)");
+        updateStep('rx-channel', 'done', 'Open (Connected)');
+        updateNavbarStatus('connected');
+        
+        // Stop signaling poll interval since connection is fully active
+        clearInterval(signalPollInterval);
+    };
+    
+    dataChannel.onclose = () => {
+        console.log("Data channel is CLOSED (Rx)");
+        updateNavbarStatus('disconnected');
+    };
+    
+    dataChannel.onmessage = async (event) => {
+        if (typeof event.data === 'string') {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'metadata') {
+                    console.log("Received file metadata:", msg);
+                    fileMetadata = msg;
+                    receivedChunks = [];
+                    receivedSize = 0;
+                    transferStartTime = Date.now();
+                    
+                    updateNavbarStatus('transferring');
+                    document.getElementById('rx-progress-container').style.display = 'block';
+                    document.getElementById('rx-progress-text').innerText = `Receiving (${msg.fileIndex + 1}/${msg.totalFiles}): ${msg.filename}`;
+                    
+                    // Create writable disk stream if directory handle is active
+                    if (directoryHandle) {
+                        try {
+                            const fileHandle = await directoryHandle.getFileHandle(msg.filename, { create: true });
+                            fileWritable = await fileHandle.createWritable();
+                        } catch (err) {
+                            console.error("Error creating directory writable stream, falling back to RAM:", err);
+                            fileWritable = null;
+                        }
+                    }
+                    
+                    // Acknowledge metadata and trigger chunk sending
+                    dataChannel.send(JSON.stringify({ type: 'ready_for_file' }));
+                    
+                } else if (msg.type === 'file_done') {
+                    console.log("File completed:", fileMetadata.filename);
+                    
+                    if (fileWritable) {
+                        await fileWritable.close();
+                        fileWritable = null;
+                    } else {
+                        // Keep in memory
+                        fileBlob = new Blob(receivedChunks, { type: fileMetadata.mime || 'application/octet-stream' });
+                        receivedFilesList.push({
+                            blob: fileBlob,
+                            filename: fileMetadata.filename,
+                            size: fileMetadata.size
+                        });
+                    }
+                    
+                    // Acknowledge file done
+                    dataChannel.send(JSON.stringify({ type: 'file_received' }));
+                    
+                } else if (msg.type === 'all_done') {
+                    console.log("All transfers complete!");
+                    updateNavbarStatus('connected');
+                    
+                    document.getElementById('connection-progress-card').style.display = 'none';
+                    document.getElementById('download-ready-card').style.display = 'block';
+                    
+                    const listContainer = document.getElementById('download-file-list-container');
+                    if (listContainer) {
+                        listContainer.innerHTML = '';
+                        if (directoryHandle) {
+                            listContainer.innerHTML = `<p style="color: var(--accent-success); font-weight: 600; text-align: center; margin-bottom: 0;">Saved directly to your selected folder: <strong>${directoryHandle.name}</strong></p>`;
+                            document.getElementById('save-file-btn').style.display = 'none';
+                        } else {
+                            document.getElementById('save-file-btn').style.display = 'flex';
+                            receivedFilesList.forEach((item, index) => {
+                                listContainer.innerHTML += `
+                                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card);">
+                                        <span style="font-size: 1.5rem;">📄</span>
+                                        <div style="flex: 1; min-width: 0; text-align: left;">
+                                            <div style="font-weight: 600; font-size: 0.85rem; word-break: break-all; color: var(--text-primary);">${item.filename}</div>
+                                            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">${formatBytes(item.size)}</div>
+                                        </div>
+                                        <button onclick="saveSingleFile(${index})" class="btn" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-radius: var(--radius-sm);">Download</button>
+                                    </div>
+                                `;
+                            });
+                            
+                            const lastItem = receivedFilesList[receivedFilesList.length - 1];
+                            if (lastItem && lastItem.blob.type && (lastItem.blob.type.startsWith('image/') || lastItem.blob.type === 'application/pdf' || lastItem.blob.type.startsWith('text/'))) {
+                                document.getElementById('preview-file-btn').style.display = 'flex';
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error("Error parsing message on receiver:", err);
+            }
+        } else {
+            // Binary chunk received
+            if (fileWritable) {
+                await fileWritable.write(event.data);
+            } else {
+                receivedChunks.push(event.data);
+            }
+            receivedSize += event.data.byteLength;
+            
+            const percent = Math.min((receivedSize / fileMetadata.size) * 100, 100);
+            document.getElementById('rx-progress-bar').style.width = percent + '%';
+            document.getElementById('rx-progress-percent').innerText = Math.round(percent) + '%';
+            
+            const timeElapsed = (Date.now() - transferStartTime) / 1000;
+            if (timeElapsed > 0) {
+                const speed = receivedSize / timeElapsed;
+                document.getElementById('rx-speed').innerText = formatSpeed(speed);
+            }
+        }
+    };
+}
+
+// Download all files from memory
+function saveAllReceivedFiles() {
+    receivedFilesList.forEach((item) => {
+        const url = URL.createObjectURL(item.blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    });
+}
+
+// Download a single file
+function saveSingleFile(index) {
+    const item = receivedFilesList[index];
+    if (!item) return;
+    const url = URL.createObjectURL(item.blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = item.filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// Preview file inline
+function previewReceivedFile() {
+    const lastItem = receivedFilesList[receivedFilesList.length - 1];
+    if (!lastItem) return;
+    
+    const container = document.getElementById('preview-container');
+    container.innerHTML = '';
+    
+    const mime = lastItem.blob.type || '';
+    const url = URL.createObjectURL(lastItem.blob);
+    
+    if (mime.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.src = url;
+        img.style.maxWidth = '100%';
+        img.style.height = 'auto';
+        img.style.borderRadius = 'var(--radius-sm)';
+        container.appendChild(img);
+    } else if (mime === 'application/pdf') {
+        const iframe = document.createElement('iframe');
+        iframe.src = url + '#toolbar=0&navpanes=0&scrollbar=0';
+        iframe.style.width = '100%';
+        iframe.style.height = '400px';
+        iframe.style.border = 'none';
+        container.appendChild(iframe);
+    } else if (mime.startsWith('text/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const pre = document.createElement('pre');
+            pre.innerText = e.target.result;
+            pre.style.textAlign = 'left';
+            pre.style.fontFamily = 'monospace';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.wordBreak = 'break-all';
+            pre.style.width = '100%';
+            pre.style.fontSize = '0.85rem';
+            pre.style.color = 'var(--text-primary)';
+            container.appendChild(pre);
+        };
+        reader.readAsText(lastItem.blob);
+    }
+    
+    document.getElementById('inline-preview-card').style.display = 'block';
+    
+    // Auto-scroll to preview
+    document.getElementById('inline-preview-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeInlinePreview() {
+    document.getElementById('inline-preview-card').style.display = 'none';
+}
+
+// Utility formatting functions
+function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
+// Speed formatting
+function formatSpeed(bytesPerSecond) {
+    const mb = bytesPerSecond / (1024 * 1024);
+    if (mb >= 1) return mb.toFixed(2) + ' MB/s';
+    return (bytesPerSecond / 1024).toFixed(1) + ' KB/s';
+}
+
+// Auto-run validation on page load if room code is pre-filled
+window.onload = async () => {
+    if (roomCode && roomCode.length === 6) {
+        try {
+            const response = await fetch('/api/p2p/room_info/' + roomCode);
+            if (!response.ok) {
+                // Room is invalid, show the join card with an error!
+                document.getElementById('join-room-card').classList.remove('d-none');
+                document.getElementById('email-auth-card').classList.add('d-none');
+                const errorDiv = document.getElementById('join-error');
+                if (errorDiv) {
+                    errorDiv.innerText = "The room code in the link is invalid or has expired.";
+                    errorDiv.style.display = 'block';
+                }
+            }
+        } catch (e) {
+            console.error("Error validating room on load", e);
+        }
+    }
+};
+</script>
+{% endblock %}

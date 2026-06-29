@@ -7,14 +7,123 @@
         <p style="color: var(--text-muted); margin-bottom: 2rem;">This file has been securely shared with you.</p>
 
         <form method="POST" id="shared-file-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <p style="text-align: left; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
                 Enter your email to access or request download:
             </p>
             <div style="display: flex; gap: 0.5rem;">
-                <input type="email" name="email" required placeholder="your.email@example.com" style="flex: 1; margin-bottom: 0;" id="shared-email">
+                <input type="email" name="email" required placeholder="your.email@example.com" style="flex: 1; margin-bottom: 0;" id="shared-email" value="{{ email or '' }}">
                 <button type="submit" class="btn" id="shared-submit">Continue</button>
             </div>
         </form>
+        
+        <script>
+            document.getElementById('shared-file-form').addEventListener('submit', async (e) => {
+                const btn = document.getElementById('shared-submit');
+                
+                // If it's just requesting access, let it submit normally
+                // Wait, if it's already approved, it will download.
+                // We must intercept it to decrypt in memory.
+                e.preventDefault();
+                btn.innerText = 'Checking...';
+                btn.disabled = true;
+                
+                const formData = new FormData(e.target);
+                try {
+                    const res = await fetch(window.location.href, { method: 'POST', body: formData });
+                    const contentType = res.headers.get('content-type');
+                    
+                    if (contentType && contentType.includes('text/html')) {
+                        // Pending, Denied, or Secure Preview page. Render it.
+                        const html = await res.text();
+                        document.open();
+                        document.write(html);
+                        document.close();
+                    } else {
+                        // It's a file download!
+                        btn.innerText = '🔒 Decrypting...';
+                        
+                        const encryptedBuffer = await res.arrayBuffer();
+                        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+                        const keyBase64 = hashParams.get('key');
+                        
+                        if (!keyBase64) {
+                            alert("Decryption key missing from URL! Cannot decrypt.");
+                            btn.innerText = 'Continue';
+                            btn.disabled = false;
+                            return;
+                        }
+                        
+                        // Decode base64 key
+                        const binaryKeyStr = atob(keyBase64);
+                        const keyBytes = new Uint8Array(binaryKeyStr.length);
+                        for (let i = 0; i < binaryKeyStr.length; i++) {
+                            keyBytes[i] = binaryKeyStr.charCodeAt(i);
+                        }
+                        
+                        // Import key
+                        const cryptoKey = await crypto.subtle.importKey(
+                            "raw",
+                            keyBytes,
+                            { name: "AES-GCM", length: 256 },
+                            true,
+                            ["encrypt", "decrypt"]
+                        );
+                        
+                        // Extract IV (first 12 bytes) and ciphertext
+                        const iv = encryptedBuffer.slice(0, 12);
+                        const data = encryptedBuffer.slice(12);
+                        
+                        // Decrypt
+                        const decryptedBuffer = await crypto.subtle.decrypt(
+                            { name: "AES-GCM", iv: iv },
+                            cryptoKey,
+                            data
+                        );
+                        
+                        // Download
+                        const blob = new Blob([decryptedBuffer]);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        // Extract filename from content-disposition header if possible, else use default
+                        const cd = res.headers.get('content-disposition');
+                        let filename = 'downloaded_file';
+                        if (cd && cd.includes('filename=')) {
+                            filename = cd.split('filename=')[1].replace(/"/g, '');
+                        }
+                        a.download = filename;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        
+                        btn.innerText = '✅ Downloaded';
+                    }
+                } catch (err) {
+                    console.error(err);
+                    alert("Decryption failed. The key might be invalid or the file is corrupted.");
+                    btn.innerText = 'Continue';
+                    btn.disabled = false;
+                }
+            });
+        </script>
     </div>
 </div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+            {% if "wait for the owner" in message or "still pending" in message %}
+            <script>
+                // Auto-refresh by resubmitting the form every 3 seconds to check status
+                setTimeout(() => {
+                    if(document.getElementById("shared-email").value) {
+                        document.getElementById("shared-submit").click();
+                    }
+                }, 3000);
+            </script>
+            {% endif %}
+        {% endfor %}
+    {% endif %}
+{% endwith %}
+
 {% endblock %}

@@ -25,6 +25,17 @@
 </div>
 
 <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const fileId = "{{ file_id }}";
+        const key = localStorage.getItem('e2e_key_' + fileId);
+        if (key) {
+            const linkInput = document.getElementById("share-link");
+            linkInput.value = linkInput.value + "#key=" + key;
+        }
+    });
+</script>
+
+<script>
 function copyLink() {
     var copyText = document.getElementById("share-link");
     copyText.select();

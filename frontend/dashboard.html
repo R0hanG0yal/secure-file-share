@@ -26,7 +26,12 @@
         <div class="file-icon">📄</div>
         <div class="file-name">{{ f.filename }}</div>
         <form action="/share/{{ f.id }}" method="post" class="file-actions" style="flex-direction: row; align-items: center;">
-            <input type="number" name="hours" value="1" min="1" placeholder="Hrs" title="Expiry hours" id="hours-{{ f.id }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <select name="hours" class="btn" style="background: transparent; border: 1px solid var(--border-card); color: var(--text-primary); padding: 0.5rem; border-radius: var(--radius-sm);">
+                <option value="1">1 Hour</option>
+                <option value="24">24 Hours</option>
+                <option value="168">1 Week</option>
+            </select>
             <label style="margin-bottom: 0; white-space: nowrap; font-size: 0.8rem;">
                 <input type="checkbox" name="one_time"> One-time
             </label>

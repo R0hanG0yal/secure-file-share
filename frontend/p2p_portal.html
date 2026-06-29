@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper" style="min-height: calc(100vh - 250px);">
+    <div style="width: 100%; max-width: 800px; text-align: center;">
+        <h2 style="font-size: 2.5rem; margin-bottom: 0.5rem; background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-primary-light) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+            Secure P2P Share
+        </h2>
+        <p class="page-subtitle" style="margin-bottom: 3rem; font-size: 1.1rem;">
+            Transfer files directly between devices in real-time. No cloud storage, fully encrypted.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;" class="p2p-portal-grid">
+            
+            <!-- Sender Card -->
+            <div class="card" style="padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; height: 100%;">
+                <div>
+                    <div style="font-size: 4rem; margin-bottom: 1.5rem; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.05));">📤</div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--text-primary);">Send Files</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 2rem;">
+                        Create a secure room, select or drag files, and generate a 6-character room code or QR code to share with others.
+                    </p>
+                </div>
+                <a href="/p2p/send" class="btn" style="width: 100%; padding: 1rem; font-size: 1rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md);">
+                    ⚡ Start Sending
+                </a>
+            </div>
+
+            <!-- Receiver Card -->
+            <div class="card" style="padding: 3rem 2rem; display: flex; flex-direction: column; align-items: center; justify-content: space-between; text-align: center; height: 100%;">
+                <div>
+                    <div style="font-size: 4rem; margin-bottom: 1.5rem; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.05));">📥</div>
+                    <h3 style="font-size: 1.5rem; margin-bottom: 1rem; color: var(--text-primary);">Receive Files</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 2rem;">
+                        Enter a 6-character room code shared by a sender to connect, request access, and download files directly.
+                    </p>
+                </div>
+                <a href="/p2p/receive" class="btn btn-outline" style="width: 100%; padding: 1rem; font-size: 1rem; display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md); border-color: var(--accent-primary); color: var(--accent-primary-light);">
+                    🔑 Enter Room Code
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .p2p-portal-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+}
+</style>
+{% endblock %}
