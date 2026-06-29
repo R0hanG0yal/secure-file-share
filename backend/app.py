@@ -1,6 +1,12 @@
 from flask import Flask, render_template, request, redirect, session, send_from_directory, flash, jsonify
 import os, base64, mimetypes, uuid, string, random
-import threading, time, urllib.request
+import threading, time, urllib.request, sys
+
+# Add the backend directory to sys.path so imports work when run from the parent directory (e.g. by Gunicorn on Render)
+_BASE = os.path.dirname(os.path.abspath(__file__))
+if _BASE not in sys.path:
+    sys.path.insert(0, _BASE)
+
 # pyrefly: ignore [missing-import]
 from flask_wtf.csrf import CSRFProtect
 # pyrefly: ignore [missing-import]
