@@ -621,11 +621,20 @@ async function initializeWebRTC() {
     
     peerConnection.oniceconnectionstatechange = () => {
         console.log("ICE state changed:", peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'connected') {
+        if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
             updateStep('peer', 'done', 'Connected');
             updateStep('channel', 'active', 'Opening data channel...');
-        } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
-            handleDisconnect();
+        } else if (peerConnection.iceConnectionState === 'failed') {
+            console.warn("ICE connection failed on sender");
+            updateStep('peer', 'active', 'Connection failed. Retrying...');
+            setTimeout(() => {
+                if (peerConnection && peerConnection.iceConnectionState === 'failed') {
+                    handleDisconnect();
+                }
+            }, 5000);
+        } else if (peerConnection.iceConnectionState === 'disconnected') {
+            console.warn("ICE connection disconnected on sender");
+            updateStep('peer', 'active', 'Reconnecting...');
         }
     };
     

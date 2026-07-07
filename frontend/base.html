@@ -26,6 +26,16 @@
     </script>
 </head>
 <body>
+    <!-- Insecure Context Warning Banner -->
+    <div id="insecure-context-banner" style="display: none; background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%); color: #1a1a1a; text-align: center; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.9rem; z-index: 99999; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.15); line-height: 1.4;">
+        ⚠️ Secure Context Required: WebRTC P2P sharing requires HTTPS on mobile/remote devices. Please access this site over HTTPS to enable file transfers.
+    </div>
+    <script>
+        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== '::1') {
+            document.getElementById('insecure-context-banner').style.display = 'block';
+        }
+    </script>
+
     <!-- Ambient glow orbs -->
     <div class="ambient-orb orb-1"></div>
     <div class="ambient-orb orb-2"></div>

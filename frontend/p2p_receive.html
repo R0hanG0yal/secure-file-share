@@ -410,12 +410,23 @@ async function initializeReceiverWebRTC() {
     
     peerConnection.oniceconnectionstatechange = () => {
         console.log("ICE state changed (Rx):", peerConnection.iceConnectionState);
-        if (peerConnection.iceConnectionState === 'connected') {
+        if (peerConnection.iceConnectionState === 'connected' || peerConnection.iceConnectionState === 'completed') {
             updateStep('rx-peer', 'done', 'Connected');
             updateStep('rx-channel', 'active', 'Waiting for data channel...');
-        } else if (peerConnection.iceConnectionState === 'disconnected' || peerConnection.iceConnectionState === 'failed') {
-            alert("Connection lost. Resetting.");
-            window.location.reload();
+        } else if (peerConnection.iceConnectionState === 'failed') {
+            console.warn("ICE connection failed (Rx)");
+            updateStep('rx-peer', 'active', 'Connection failed. Retrying...');
+            
+            // Give it 5 seconds to recover or retry before resetting
+            setTimeout(() => {
+                if (peerConnection && (peerConnection.iceConnectionState === 'failed')) {
+                    alert("Connection failed. Resetting page.");
+                    window.location.reload();
+                }
+            }, 5000);
+        } else if (peerConnection.iceConnectionState === 'disconnected') {
+            console.warn("ICE connection disconnected (Rx)");
+            updateStep('rx-peer', 'active', 'Reconnecting...');
         }
     };
     

@@ -47,7 +47,7 @@ limiter = Limiter(
 @app.after_request
 def add_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' stun: turn: turns: *.metered.ca; img-src 'self' data: blob: https://api.qrserver.com; child-src 'self' blob:; frame-src 'self' blob:; object-src 'self' blob:;"
+    response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' stun: turn: turns: *.google.com:* *.metered.ca:*; img-src 'self' data: blob: https://api.qrserver.com; child-src 'self' blob:; frame-src 'self' blob:; object-src 'self' blob:;"
     
     # Prevent caching for API endpoints
     if request.path.startswith('/api/'):
