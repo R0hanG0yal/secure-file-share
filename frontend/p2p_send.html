@@ -206,13 +206,30 @@ let dataChannel = null;
 let currentRequestId = null;
 let pollInterval = null;
 let signalPollInterval = null;
+let pendingCandidates = [];
 
-// STUN configuration
+// STUN/TURN configuration
 const configuration = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
         { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' }
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:openrelay.metered.ca:80' },
+        { 
+            urls: 'turn:openrelay.metered.ca:80', 
+            username: 'openrelayproject', 
+            credential: 'openrelayproject' 
+        },
+        { 
+            urls: 'turn:openrelay.metered.ca:443', 
+            username: 'openrelayproject', 
+            credential: 'openrelayproject' 
+        },
+        { 
+            urls: 'turns:openrelay.metered.ca:443?transport=tcp', 
+            username: 'openrelayproject', 
+            credential: 'openrelayproject' 
+        }
     ]
 };
 
@@ -525,7 +542,7 @@ function startSignalPolling() {
             const data = await response.json();
             
             for (let msg of data.messages) {
-                handleSignalMessage(msg);
+                await handleSignalMessage(msg);
             }
         } catch (e) {
             console.error("Error polling signals", e);
@@ -537,14 +554,29 @@ function startSignalPolling() {
 async function handleSignalMessage(msg) {
     if (msg.type === 'join') {
         console.log("Receiver joined signaling, starting WebRTC...");
-        initializeWebRTC();
+        await initializeWebRTC();
     } else if (msg.type === 'answer') {
         console.log("Received answer, setting remote description...");
         await peerConnection.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        // Process any queued candidates
+        console.log("Applying queued candidates:", pendingCandidates.length);
+        for (const candidate of pendingCandidates) {
+            try {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            } catch (err) {
+                console.error("Error adding queued candidate:", err);
+            }
+        }
+        pendingCandidates = [];
     } else if (msg.type === 'candidate') {
         console.log("Received candidate, adding...");
         if (msg.candidate) {
-            await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+            if (peerConnection && peerConnection.remoteDescription && peerConnection.remoteDescription.type) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(msg.candidate));
+            } else {
+                console.log("Remote description not set yet, queuing candidate...");
+                pendingCandidates.push(msg.candidate);
+            }
         }
     }
 }
@@ -567,6 +599,7 @@ async function sendSignal(message) {
 
 // WebRTC Initialization
 async function initializeWebRTC() {
+    pendingCandidates = [];
     peerConnection = new RTCPeerConnection(configuration);
     
     // Create Data Channel
