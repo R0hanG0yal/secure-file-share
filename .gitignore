@@ -1,3 +1,10 @@
+# Node.js
+node_modules/
+app_client/node_modules/
+app_server/node_modules/
+app_client/dist/
+app_server/temp_uploads/
+
 # Python
 __pycache__/
 *.py[cod]

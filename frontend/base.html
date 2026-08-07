@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SecureShare — Encrypted File Sharing</title>
+    <title>DoShare — Dageroz Digital Agency File Transfer</title>
     <meta name="description" content="Share files securely with end-to-end encryption, expiring links, and access control.">
+    <!-- Official DS Emblem Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23120E0A'/><path d='M20 18 H45 C65 18 80 30 80 50 C80 70 65 82 45 82 H20 V18 Z M32 30 V70 H45 C58 70 67 62 67 50 C67 38 58 30 45 30 H32 Z' fill='%23FFFFFF'/><path d='M30 42 H65 C72 42 76 46 76 50 C76 54 72 58 65 58 H45 C35 58 25 50 25 38 C25 26 35 18 50 18 H70 V30 H50 C43 30 38 34 38 38 C38 42 43 45 50 45 H70 C80 45 88 53 88 63 C88 73 80 82 65 82 H35 V70 H65 C72 70 76 66 76 62 C76 58 72 55 65 55 H45 C35 55 30 48 30 42 Z' fill='%23C19A6B'/></svg>">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- CSRF Token -->
@@ -43,11 +45,17 @@
 
     <nav class="navbar" id="main-nav">
         <div class="nav-inner">
-            <a href="/" class="nav-brand" id="nav-brand">
-                <span class="brand-icon">🔒</span>
-                <span class="brand-text">Secure<span class="brand-accent">Share</span></span>
+            <a href="/" class="nav-brand" id="nav-brand" style="display: flex; items-center; gap: 0.75rem;">
+                <svg style="width: 28px; height: 28px;" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M20 18 H45 C65 18 80 30 80 50 C80 70 65 82 45 82 H20 V18 Z M32 30 V70 H45 C58 70 67 62 67 50 C67 38 58 30 45 30 H32 Z" fill="#FFFFFF"/>
+                    <path d="M30 42 H65 C72 42 76 46 76 50 C76 54 72 58 65 58 H45 C35 58 25 50 25 38 C25 26 35 18 50 18 H70 V30 H50 C43 30 38 34 38 38 C38 42 43 45 50 45 H70 C80 45 88 53 88 63 C88 73 80 82 65 82 H35 V70 H65 C72 70 76 66 76 62 C76 58 72 55 65 55 H45 C35 55 30 48 30 42 Z" fill="#C19A6B"/>
+                </svg>
+                <span class="brand-text">Do<span class="brand-accent">Share</span></span>
             </a>
             <div class="nav-links" id="nav-links">
+                <a href="http://localhost:5173" target="_blank" class="nav-link" id="nav-identity-share" style="margin-right: 0.5rem; color: var(--accent-primary); font-weight: 700;">
+                    <span class="nav-icon">🚀</span> Identity Share (New)
+                </a>
                 <a href="/p2p" class="nav-link" id="nav-p2p" style="margin-right: 0.5rem; color: var(--accent-primary-light); font-weight: 600;">
                     <span class="nav-icon">⚡</span> P2P Share
                 </a>
@@ -88,7 +96,7 @@
 
     <footer class="footer" id="main-footer">
         <div class="footer-inner">
-            <p class="footer-text">© 2026 SecureShare — Built with 🔐 encryption</p>
+            <p class="footer-text">© 2026 DoShare — Dageroz Digital Agency</p>
         </div>
     </footer>
 </body>

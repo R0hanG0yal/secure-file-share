@@ -378,3 +378,8 @@ def api_p2p_signal_receive(room_code):
         active_signals[room_code]["receiver_queue"] = []
         
     return jsonify({"messages": messages})
+
+if __name__ == "__main__":
+    init_db()
+    port = int(os.getenv("PORT", 8000))
+    app.run(host="0.0.0.0", port=port, debug=False)

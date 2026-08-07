@@ -1,0 +1,37 @@
+/* ═══════════════════════════════════════════
+   OBSIDIAN & METALLIC ROSE GOLD DARK THEME
+   ═══════════════════════════════════════════ */
+.dark-theme {
+  --bg-canvas: #120e0a;
+  --bg-surface: rgba(28, 22, 18, 0.78);
+  --bg-surface-strong: rgba(36, 28, 22, 0.92);
+
+  --text-heading: #ffffff;    /* Pure White */
+  --text-body: #dfcfbd;       /* Soft Sand White */
+  --text-muted: #b09c88;      /* Warm Muted Gold */
+
+  --logo-d-fill: #ffffff;
+  --logo-s-fill: #e6c594;
+
+  --accent-color: #c19a6b;   /* Champagne Warm Gold */
+  --accent-light: #e6c594;
+  --accent-dark: #8b5a2b;
+
+  --glass-border-top: rgba(230, 197, 148, 0.35);
+  --glass-border-bottom: rgba(0, 0, 0, 0.6);
+  --glass-border: rgba(184, 134, 11, 0.35);
+
+  --shadow-card: 0 25px 60px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(230, 197, 148, 0.25);
+
+  --input-bg: rgba(18, 14, 10, 0.85);
+  --input-border: rgba(193, 154, 107, 0.45);
+  --input-text: #ffffff;
+
+  --dropzone-bg: linear-gradient(135deg, rgba(193, 154, 107, 0.2) 0%, rgba(28, 22, 18, 0.8) 50%, rgba(139, 90, 43, 0.25) 100%);
+  --dropzone-border: rgba(193, 154, 107, 0.6);
+  --dropzone-text: #ffffff;
+
+  --btn-subtle-bg: rgba(255, 255, 255, 0.1);
+  --btn-subtle-text: #ffffff;
+  --btn-subtle-border: rgba(193, 154, 107, 0.3);
+}
