@@ -4,12 +4,10 @@ services:
     name: doshare-app
     env: node
     plan: free
-    buildCommand: cd app_client && npm install && npm run build && cd ../app_server && npm install
+    buildCommand: cd app_client && npm install --include=dev && npm run build && cd ../app_server && npm install
     startCommand: cd app_server && node server.js
     autoDeploy: true
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: VITE_CLASSIC_P2P_URL
         value: https://doshare-p2p.onrender.com/p2p
 
