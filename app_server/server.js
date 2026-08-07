@@ -63,6 +63,14 @@ io.on('connection', (socket) => {
   });
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    service: 'DoShare API'
+  });
+});
+
 // Serve production static React frontend
 const clientDistPath = path.join(__dirname, '..', 'app_client', 'dist');
 if (fs.existsSync(clientDistPath)) {
@@ -71,15 +79,32 @@ if (fs.existsSync(clientDistPath)) {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(clientDistPath, 'index.html'));
   });
-} else {
-  app.get('/api/health', (req, res) => {
-    res.json({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-      service: 'DoShare API'
-    });
-  });
 }
+
+// -------------------------------------------------------------------
+// Render Auto-Sleep Prevention (Ping every 14 minutes)
+// -------------------------------------------------------------------
+const https = require('https');
+const PING_INTERVAL = 14 * 60 * 1000; // 14 minutes
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || 'https://doshare-app.onrender.com';
+const FLASK_URL = 'https://dageroz.onrender.com';
+
+setInterval(() => {
+  // Ping Node server
+  console.log(`[Keep-Alive] Pinging Node Server: ${SELF_URL}/api/health`);
+  https.get(`${SELF_URL}/api/health`, (resp) => {
+    resp.on('data', () => {}); 
+    resp.on('end', () => console.log(`[Keep-Alive] Node ping successful`));
+  }).on('error', (err) => console.error(`[Keep-Alive] Node ping error: ${err.message}`));
+
+  // Ping Flask server
+  console.log(`[Keep-Alive] Pinging Flask Server: ${FLASK_URL}/`);
+  https.get(`${FLASK_URL}/`, (resp) => {
+    resp.on('data', () => {}); 
+    resp.on('end', () => console.log(`[Keep-Alive] Flask ping successful`));
+  }).on('error', (err) => console.error(`[Keep-Alive] Flask ping error: ${err.message}`));
+}, PING_INTERVAL);
+// -------------------------------------------------------------------
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
