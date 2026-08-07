@@ -91,8 +91,14 @@ export default function LiquidDropzone({ onSendSuccess }) {
       )}
 
       {success && (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+        <div className="p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2"
+          style={{
+            background: 'rgba(16, 120, 60, 0.15)',
+            borderColor: 'rgba(16, 120, 60, 0.5)',
+            color: '#0a5c2e'
+          }}
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#0d7a3e' }} />
           <span>{success}</span>
         </div>
       )}
