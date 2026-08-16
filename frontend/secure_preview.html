@@ -51,7 +51,7 @@
     @media print {
         body * { display: none !important; }
         body::after {
-            content: "🔒 Printing is disabled for secure previews.";
+            content: "Printing is disabled for secure previews.";
             display: block !important;
             font-size: 2rem;
             text-align: center;
@@ -81,10 +81,10 @@
     <div class="auth-card" style="max-width: 100%; border-radius: var(--radius-md); text-align: center;">
         <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem;">Secure Preview: {{ file.filename }}</h2>
         <p style="color: var(--accent-danger); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.75rem;">
-            ⚠️ One-time view only. Download, print, and copy are disabled.
+            One-time view only. Download, print, and copy are disabled.
         </p>
         <p style="color: var(--text-muted); font-size: 0.75rem; margin-bottom: 1.5rem;">
-            🔒 Content is watermarked and protected. The preview will blur if you switch tabs.
+            Content is watermarked and protected. The preview will blur if you switch tabs.
         </p>
 
         <div id="secure-preview-zone" style="position: relative; background: var(--bg-base); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); overflow: auto; max-height: 700px; min-height: 200px;"
@@ -99,7 +99,7 @@
 
             <!-- Content area -->
             <div id="preview-content" style="position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; width: 100%;">
-                <div id="preview-loading" style="color: var(--text-muted); padding: 3rem;">🔒 Decrypting secure preview...</div>
+                <div id="preview-loading" style="color: var(--text-muted); padding: 3rem;">Decrypting secure preview...</div>
             </div>
         </div>
 
@@ -240,7 +240,7 @@
                 // Page navigation info
                 const pageInfo = document.createElement('div');
                 pageInfo.style.cssText = 'margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-muted); font-weight: 600;';
-                pageInfo.textContent = `📄 ${totalPages} page${totalPages > 1 ? 's' : ''}`;
+                pageInfo.textContent = `${totalPages} page${totalPages > 1 ? 's' : ''}`;
                 contentEl.appendChild(pageInfo);
 
                 // Render each page as a canvas
@@ -280,7 +280,7 @@
             }
         } catch (err) {
             console.error("Preview decryption failed:", err);
-            loading.innerText = "❌ Failed to decrypt preview. The link may have expired.";
+            loading.innerText = "Failed to decrypt preview. The link may have expired.";
             loading.style.color = "var(--accent-danger)";
         }
     });

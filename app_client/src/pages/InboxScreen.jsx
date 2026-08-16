@@ -203,18 +203,19 @@ export default function InboxScreen({ username, setUnreadCount, hideHeader }) {
                     </div>
                   </div>
 
-                  {/* Quick Action: Trash button */}
+                  {/* Quick Action: Download button */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(item._id, displayName);
+                      handleDownloadAndDelete(item);
                     }}
-                    title="Delete from history"
-                    className="p-1.5 rounded-lg theme-text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0"
-                    aria-label="Delete"
+                    disabled={isDownloading}
+                    title="Download file"
+                    className="px-3 py-1.5 rounded-xl btn-primary-theme text-[11px] font-extrabold flex items-center gap-1.5 shrink-0 shadow-sm disabled:opacity-50"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
                   </button>
 
                   <ChevronDown className={`w-4 h-4 theme-text-heading transition-transform duration-300 shrink-0 ${isExpanded ? 'rotate-180' : ''}`} />

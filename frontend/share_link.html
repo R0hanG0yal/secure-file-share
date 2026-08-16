@@ -45,7 +45,7 @@ function copyLink() {
         navigator.clipboard.writeText(copyText.value).then(function() {
             var btn = document.getElementById("copy-btn");
             var originalText = btn.innerText;
-            btn.innerText = "Copied! ✅";
+            btn.innerText = "Copied!";
             btn.style.background = "var(--accent-success)";
             
             setTimeout(function() {
@@ -57,7 +57,7 @@ function copyLink() {
         // Fallback
         document.execCommand("copy");
         var btn = document.getElementById("copy-btn");
-        btn.innerText = "Copied! ✅";
+        btn.innerText = "Copied!";
         setTimeout(function() {
             btn.innerText = "Copy";
         }, 2000);

@@ -35,7 +35,7 @@
             <div class="card qr-card-content" style="padding: 1.5rem; display: flex; align-items: center; gap: 1.5rem;">
                 <div style="background: #ffffff; padding: 0.5rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-inset); width: 140px; height: 140px; flex-shrink: 0;">
                     <img id="qr-code-img" src="" alt="QR Code" style="width: 100%; height: 100%; display: none;">
-                    <div id="qr-placeholder" style="font-size: 2rem; color: var(--text-muted); opacity: 0.5;">📱</div>
+                    <div id="qr-placeholder" style="font-size: 2rem; color: var(--text-muted); opacity: 0.5;"></div>
                 </div>
                 <div>
                     <h4 style="margin-bottom: 0.3rem; font-weight: 700; font-size: 1rem; color: var(--text-primary);">Scan to open on mobile</h4>
@@ -48,7 +48,7 @@
                 <div class="file-upload-wrapper" id="drop-zone" style="height: 180px; margin-bottom: 0;">
                     <input type="file" id="p2p-file-input" class="premium-file-input" style="z-index: 5;" multiple>
                     <div class="file-upload-display">
-                        <div class="upload-icon-large" id="upload-icon">⚡</div>
+                        <div class="upload-icon-large" id="upload-icon"></div>
                         <div class="upload-text-main" id="upload-main-text">Drop files here</div>
                         <div class="upload-text-sub">or tap to browse — multiple files supported</div>
                     </div>
@@ -128,10 +128,10 @@
 
             <!-- Send File Button -->
             <button class="btn" id="send-files-btn" disabled onclick="startFileTransfer()" style="width: 100%; padding: 1.1rem; font-size: 1.1rem; opacity: 0.6; cursor: not-allowed; display: flex; align-items: center; justify-content: center; gap: 0.5rem; border-radius: var(--radius-md);">
-                 🔒 Send files
+                 Send files
             </button>
             <p style="font-size: 0.75rem; color: var(--text-muted); text-align: center; line-height: 1.4;">
-                ⚠️ Keep this tab open. P2P transfers are direct device-to-device. Closing this tab will cancel the share.
+                Keep this tab open. P2P transfers are direct device-to-device. Closing this tab will cancel the share.
             </p>
         </div>
     </div>
@@ -139,7 +139,6 @@
 
 <!-- Transfer Complete Card (Hidden initially) -->
 <div class="card" id="sender-complete-card" style="display: none; text-align: center; padding: 3rem 2rem; margin-top: 2rem;">
-    <div style="font-size: 3.5rem; margin-bottom: 1rem;">🎉</div>
     <h3 style="color: var(--accent-success); margin-bottom: 0.5rem; font-size: 1.6rem;">Transfer Complete!</h3>
     <p style="color: var(--text-muted); font-size: 1rem;">All files were securely sent to the receiver.</p>
     <div style="margin-top: 2.5rem;">
@@ -150,14 +149,13 @@
 <!-- Access Request Prompt Modal (Overlays the page when a receiver knocks) -->
 <div id="request-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; animation: fadeIn 0.3s ease;">
     <div class="auth-card" style="max-width: 450px; text-align: center; padding: 2.5rem 2rem;">
-        <div style="font-size: 3rem; margin-bottom: 1rem;">🔔</div>
         <h3 style="margin-bottom: 0.5rem; font-size: 1.4rem;">Access Requested</h3>
         <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem; line-height: 1.4;">
             A user at <strong id="requester-email" style="color: var(--accent-primary-light);">email@example.com</strong> is requesting access to download files from this room.
         </p>
         <div style="display: flex; gap: 1rem;">
-            <button class="btn" onclick="handleRequestApproval(true)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">✅ Approve</button>
-            <button class="btn btn-danger" onclick="handleRequestApproval(false)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">❌ Deny</button>
+            <button class="btn" onclick="handleRequestApproval(true)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">Approve</button>
+            <button class="btn btn-danger" onclick="handleRequestApproval(false)" style="flex: 1; padding: 0.85rem; font-size: 0.95rem;">Deny</button>
         </div>
     </div>
 </div>
@@ -253,7 +251,7 @@ function setupNavbarStatus() {
                 <span id="navbar-status-dot" style="color: var(--accent-warning); animation: blink 1.5s infinite;">●</span> <span id="navbar-status-text">Waiting for peer...</span>
             </span>
             <a href="/p2p" id="navbar-leave-btn" style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.25rem; font-weight: 600; cursor: pointer; border: 1px solid var(--border-card); padding: 0.35rem 0.75rem; border-radius: 50px; background: rgba(0,0,0,0.02); transition: all 0.4s; white-space: nowrap; flex-shrink: 0;">
-                <span>🚪</span> Leave room
+                Leave room
             </a>
         `;
         
@@ -362,7 +360,7 @@ function copyReceiveLink() {
     navigator.clipboard.writeText(url).then(() => {
         const copyBtn = document.getElementById('copy-link-btn');
         const origText = copyBtn.innerText;
-        copyBtn.innerText = 'Copied! ✅';
+        copyBtn.innerText = 'Copied!';
         copyBtn.style.background = 'var(--accent-success)';
         
         setTimeout(() => {
@@ -420,7 +418,6 @@ function renderSelectedFiles() {
     activeFiles.forEach((file, index) => {
         container.innerHTML += `
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; background: var(--bg-base); padding: 0.75rem; border-radius: var(--radius-sm); border: 1px solid var(--border-card); box-shadow: none;">
-                <span style="font-size: 1.7rem;">📄</span>
                 <div style="flex: 1; min-width: 0; text-align: left;">
                     <div style="font-weight: 600; font-size: 0.85rem; word-break: break-all; color: var(--text-primary);">${file.name}</div>
                     <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem;">${formatBytes(file.size)}</div>
@@ -722,7 +719,7 @@ function sendNextFileInQueue() {
         dataChannel.send(JSON.stringify({ type: 'all_done' }));
         
         const statusText = document.getElementById('transfer-progress-text');
-        statusText.innerText = "All files sent successfully! 🎉";
+        statusText.innerText = "All files sent successfully!";
         statusText.style.color = "var(--accent-success)";
         document.getElementById('transfer-progress-bar').classList.remove('processing-bar');
         document.getElementById('transfer-progress-bar').classList.add('processing-bar-success');

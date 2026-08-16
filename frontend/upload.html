@@ -12,13 +12,13 @@
             <div class="file-upload-wrapper">
                 <input type="file" name="file" required id="upload-file-input" class="premium-file-input" onchange="document.getElementById('upload-main-text').innerText = this.files.length ? this.files[0].name : 'Click to select a file';">
                 <div class="file-upload-display">
-                    <div class="upload-icon-large">☁️</div>
+                    <div class="upload-icon-large"></div>
                     <div class="upload-text-main" id="upload-main-text">Click to select a file</div>
                     <div class="upload-text-sub">Securely encrypted before upload</div>
                 </div>
             </div>
             <button class="btn btn-premium-upload" type="submit" id="upload-submit">
-                🔒 Encrypt & Upload
+                Encrypt & Upload
             </button>
         </form>
     </div>
@@ -33,7 +33,7 @@
         const file = fileInput.files[0];
         const submitBtn = document.getElementById('upload-submit');
         submitBtn.disabled = true;
-        submitBtn.innerText = '🔒 Encrypting...';
+        submitBtn.innerText = 'Encrypting...';
         
         try {
             // 1. Generate AES-GCM Key
@@ -63,7 +63,7 @@
             const encryptedBlob = new Blob([combinedBuffer], { type: file.type });
             
             // 5. Upload to Server
-            submitBtn.innerText = '☁️ Uploading...';
+            submitBtn.innerText = 'Uploading...';
             const formData = new FormData();
             formData.append('file', encryptedBlob, file.name);
             formData.append('csrf_token', document.querySelector('input[name="csrf_token"]').value);
@@ -81,13 +81,13 @@
             } else {
                 alert('Upload failed: ' + result.error);
                 submitBtn.disabled = false;
-                submitBtn.innerText = '🔒 Encrypt & Upload';
+                submitBtn.innerText = 'Encrypt & Upload';
             }
         } catch (err) {
             console.error(err);
             alert('Encryption failed!');
             submitBtn.disabled = false;
-            submitBtn.innerText = '🔒 Encrypt & Upload';
+            submitBtn.innerText = 'Encrypt & Upload';
         }
     });
 </script>

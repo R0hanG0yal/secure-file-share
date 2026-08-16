@@ -165,7 +165,7 @@ export default function App() {
         </main>
 
         <footer className="z-10 py-4 text-center text-[11px] font-bold theme-text-muted tracking-wider hidden md:block">
-          <p>DoShare — Secure File & Message Transfer</p>
+          <p>DoShare — Dageroz Digital Agency</p>
         </footer>
       </div>
     </Router>

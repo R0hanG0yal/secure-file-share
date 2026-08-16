@@ -109,7 +109,7 @@ setInterval(() => {
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`=======================================================`);
-  console.log(`🚀 DOSHARE BACKEND SERVER RUNNING`);
-  console.log(`📍 URL: http://localhost:${PORT}`);
+  console.log(`DOSHARE BACKEND SERVER RUNNING`);
+  console.log(`URL: http://localhost:${PORT}`);
   console.log(`=======================================================`);
 });

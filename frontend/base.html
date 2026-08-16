@@ -30,7 +30,7 @@
 <body>
     <!-- Insecure Context Warning Banner -->
     <div id="insecure-context-banner" style="display: none; background: linear-gradient(135deg, #ff4e50 0%, #f9d423 100%); color: #1a1a1a; text-align: center; padding: 0.75rem 1rem; font-weight: 700; font-size: 0.9rem; z-index: 99999; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.15); line-height: 1.4;">
-        ⚠️ Secure Context Required: WebRTC P2P sharing requires HTTPS on mobile/remote devices. Please access this site over HTTPS to enable file transfers.
+        Secure Context Required: WebRTC P2P sharing requires HTTPS on mobile/remote devices. Please access this site over HTTPS to enable file transfers.
     </div>
     <script>
         if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' && window.location.hostname !== '::1') {
@@ -54,20 +54,20 @@
             </a>
             <div class="nav-links" id="nav-links">
                 <a href="https://doshare-app.onrender.com" target="_blank" class="nav-link" id="nav-identity-share" style="margin-right: 0.5rem; color: var(--accent-primary); font-weight: 700;">
-                    <span class="nav-icon">🚀</span> DoShare App
+                    DoShare App
                 </a>
                 <a href="/p2p" class="nav-link" id="nav-p2p" style="margin-right: 0.5rem; color: var(--accent-primary-light); font-weight: 600;">
-                    <span class="nav-icon">⚡</span> P2P Share
+                    P2P Share
                 </a>
                 {% if session.get('user_id') %}
                     <a href="/dashboard" class="nav-link" id="nav-dashboard">
-                        <span class="nav-icon">📁</span> Dashboard
+                        Dashboard
                     </a>
                     <a href="/upload" class="nav-link" id="nav-upload">
-                        <span class="nav-icon">⬆️</span> Upload
+                        Upload
                     </a>
                     <a href="/access_requests" class="nav-link" id="nav-requests">
-                        <span class="nav-icon">🔔</span> Requests
+                        Requests
                     </a>
                     <a href="/logout" class="btn-logout" id="nav-logout">Logout</a>
                 {% else %}
@@ -84,7 +84,6 @@
                 <div class="flash-messages" id="flash-messages">
                     {% for category, message in messages %}
                         <div class="flash flash-{{ category }}" id="flash-{{ loop.index }}">
-                            <span class="flash-icon">{% if category == 'success' %}✅{% elif category == 'error' %}❌{% else %}ℹ️{% endif %}</span>
                             {{ message }}
                         </div>
                     {% endfor %}

@@ -2,7 +2,7 @@
 {% block content %}
 <div class="auth-wrapper">
     <div class="auth-card share-container" id="shared-file-card">
-        <div class="share-icon">📁</div>
+        <div class="share-icon"></div>
         <h2>{{ file.original_name }}</h2>
         <p style="color: var(--text-muted); margin-bottom: 2rem;">This file has been securely shared with you.</p>
 
@@ -41,7 +41,7 @@
                         document.close();
                     } else {
                         // It's a file download!
-                        btn.innerText = '🔒 Decrypting...';
+                        btn.innerText = 'Decrypting...';
                         
                         const encryptedBuffer = await res.arrayBuffer();
                         const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -96,7 +96,7 @@
                         a.click();
                         URL.revokeObjectURL(url);
                         
-                        btn.innerText = '✅ Downloaded';
+                        btn.innerText = 'Downloaded';
                     }
                 } catch (err) {
                     console.error(err);
