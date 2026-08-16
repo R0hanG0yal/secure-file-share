@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const userSchema = new mongoose.Schema({
   username: {
@@ -40,7 +42,43 @@ try {
   UserModel = mongoose.model('User');
 }
 
+// ── Persistent Disk/Memory Fallback Store ──────────────────────────
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+if (!fs.existsSync(DATA_DIR)) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {}
+}
+
 const memoryUsers = new Map();
+
+function loadUsersFromDisk() {
+  try {
+    if (fs.existsSync(USERS_FILE)) {
+      const raw = fs.readFileSync(USERS_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(user => memoryUsers.set(user._id || user.username, user));
+      }
+    }
+  } catch (err) {
+    console.warn('[UserStore] Error reading users.json fallback:', err.message);
+  }
+}
+
+function saveUsersToDisk() {
+  try {
+    const list = Array.from(memoryUsers.values());
+    fs.writeFileSync(USERS_FILE, JSON.stringify(list, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[UserStore] Error saving users.json fallback:', err.message);
+  }
+}
+
+// Initial load
+loadUsersFromDisk();
 
 const UserStore = {
   async findByUsername(username) {
@@ -92,6 +130,7 @@ const UserStore = {
         createdAt: new Date()
       };
       memoryUsers.set(user._id, user);
+      saveUsersToDisk();
       return user;
     }
   },
@@ -104,6 +143,7 @@ const UserStore = {
       const user = memoryUsers.get(userId);
       if (user) {
         user.fingerprint = fingerprint;
+        saveUsersToDisk();
       }
       return user;
     }
@@ -116,6 +156,7 @@ const UserStore = {
       const user = memoryUsers.get(userId);
       if (user) {
         user.uuid = newUUID;
+        saveUsersToDisk();
       }
       return user;
     }
@@ -128,6 +169,7 @@ const UserStore = {
       const user = memoryUsers.get(userId);
       if (user) {
         user.pushSub = pushSub;
+        saveUsersToDisk();
       }
       return user;
     }
@@ -140,6 +182,7 @@ const UserStore = {
       const user = memoryUsers.get(userId);
       if (user) {
         user.pinHash = newPinHash;
+        saveUsersToDisk();
       }
       return user;
     }

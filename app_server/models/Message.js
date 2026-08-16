@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 
 const messageSchema = new mongoose.Schema({
   sender: {
@@ -44,8 +46,42 @@ try {
   MessageModel = mongoose.model('Message');
 }
 
-// In-Memory Data Fallback for Messages
+// ── Persistent Disk/Memory Fallback Store ──────────────────────────
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
+
+if (!fs.existsSync(DATA_DIR)) {
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+  } catch (e) {}
+}
+
 let memoryMessages = [];
+
+function loadMessagesFromDisk() {
+  try {
+    if (fs.existsSync(MESSAGES_FILE)) {
+      const raw = fs.readFileSync(MESSAGES_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        memoryMessages = parsed;
+      }
+    }
+  } catch (err) {
+    console.warn('[MessageStore] Error reading messages.json fallback:', err.message);
+  }
+}
+
+function saveMessagesToDisk() {
+  try {
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(memoryMessages, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('[MessageStore] Error saving messages.json fallback:', err.message);
+  }
+}
+
+// Initial load
+loadMessagesFromDisk();
 
 const MessageStore = {
   async create({ sender, receiver, fileUrl, fileName, fileType, isText }) {
@@ -65,6 +101,7 @@ const MessageStore = {
         createdAt: new Date()
       };
       memoryMessages.push(msg);
+      saveMessagesToDisk();
       return msg;
     }
   },
@@ -83,7 +120,7 @@ const MessageStore = {
     } else {
       return memoryMessages
         .filter(m => m.receiver.toLowerCase() === username.toLowerCase())
-        .sort((a, b) => b.createdAt - a.createdAt);
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
   },
 
@@ -94,6 +131,7 @@ const MessageStore = {
       const msg = memoryMessages.find(m => m._id.toString() === id.toString());
       if (msg) {
         msg.delivered = true;
+        saveMessagesToDisk();
       }
       return msg;
     }
@@ -111,6 +149,7 @@ const MessageStore = {
           m.delivered = true;
         }
       });
+      saveMessagesToDisk();
     }
   },
 
@@ -140,6 +179,7 @@ const MessageStore = {
       if (index !== -1) {
         const deleted = memoryMessages[index];
         memoryMessages.splice(index, 1);
+        saveMessagesToDisk();
         return deleted;
       }
       return null;
