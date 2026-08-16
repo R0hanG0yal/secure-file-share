@@ -69,6 +69,7 @@ body {
   filter: blur(85px);
   top: -10%; left: -5%;
   animation: orb-drift 18s ease-in-out infinite alternate;
+  will-change: transform;
 }
 
 .orb-2 {
@@ -79,6 +80,7 @@ body {
   filter: blur(75px);
   bottom: -10%; right: -5%;
   animation: orb-drift 22s ease-in-out infinite alternate-reverse;
+  will-change: transform;
 }
 
 /* Liquid Water Bubbles drifting through the stage */
@@ -90,6 +92,7 @@ body {
   filter: blur(60px);
   top: 30%; left: 20%;
   animation: water-morph 16s ease-in-out infinite alternate;
+  will-change: transform, border-radius;
 }
 
 .liquid-bubble-2 {
@@ -100,6 +103,7 @@ body {
   filter: blur(55px);
   bottom: 20%; left: 55%;
   animation: water-morph-reverse 20s ease-in-out infinite alternate;
+  will-change: transform, border-radius;
 }
 
 .liquid-bubble-3 {
@@ -110,6 +114,7 @@ body {
   filter: blur(45px);
   top: 15%; right: 15%;
   animation: water-morph 24s ease-in-out infinite alternate;
+  will-change: transform, border-radius;
 }
 
 @keyframes orb-drift {
@@ -339,4 +344,25 @@ body {
 
 .anim-fade {
   animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE PERFORMANCE OPTIMIZATIONS
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Disable heavy background orbs and animations on mobile to prevent lag */
+  .ambient-orb-layer {
+    display: none !important;
+  }
+  
+  /* Reduce glassmorphism blur radius for better mobile GPU performance */
+  .app-glass-card {
+    backdrop-filter: blur(12px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(150%) !important;
+  }
+  
+  .app-glass-strong {
+    backdrop-filter: blur(15px) saturate(150%) !important;
+    -webkit-backdrop-filter: blur(15px) saturate(150%) !important;
+  }
 }
