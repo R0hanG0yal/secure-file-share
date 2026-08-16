@@ -133,12 +133,12 @@ export default function InboxScreen({ username, setUnreadCount, hideHeader }) {
         <div
           className="p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 anim-fade"
           style={{
-            background: 'rgba(16, 120, 60, 0.15)',
-            borderColor: 'rgba(16, 120, 60, 0.5)',
-            color: '#0a5c2e'
+            background: 'rgba(193, 154, 107, 0.15)',
+            borderColor: 'rgba(193, 154, 107, 0.4)',
+            color: 'var(--text-heading)'
           }}
         >
-          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-color)' }} />
           <span>{actionNotice}</span>
         </div>
       )}
@@ -161,7 +161,7 @@ export default function InboxScreen({ username, setUnreadCount, hideHeader }) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-black uppercase tracking-wider theme-text-heading flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+              <ShieldCheck className="w-4 h-4" style={{ color: 'var(--accent-color)' }} />
               <span>Received Transfers ({items.length})</span>
             </h3>
             <span className="text-[10px] theme-text-muted font-bold">
@@ -232,7 +232,7 @@ export default function InboxScreen({ username, setUnreadCount, hideHeader }) {
                         className="flex-1 py-2.5 rounded-xl btn-primary-theme text-xs font-bold flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
                       >
                         <Download className="w-4 h-4" />
-                        <span>{isDownloading ? 'Downloading...' : 'Download & Delete from History'}</span>
+                        <span>{isDownloading ? 'Downloading...' : 'Download'}</span>
                       </button>
 
                       {isTxt && (

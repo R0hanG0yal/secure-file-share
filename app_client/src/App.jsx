@@ -87,14 +87,14 @@ export default function App() {
           if (res.data && res.data.unreadCount !== undefined) {
             setUnreadCount(res.data.unreadCount);
           }
-        }).catch(() => {});
+        }).catch(() => { });
       });
 
       api.get('/inbox').then(res => {
         if (res.data && res.data.unreadCount !== undefined) {
           setUnreadCount(res.data.unreadCount);
         }
-      }).catch(() => {});
+      }).catch(() => { });
     } else {
       disconnectSocket();
     }

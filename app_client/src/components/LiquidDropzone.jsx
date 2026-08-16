@@ -136,8 +136,13 @@ export default function LiquidDropzone({ onSendSuccess }) {
 
       {/* Alerts */}
       {error && (
-        <div className="p-3 sm:p-3.5 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-600 dark:text-rose-200 text-xs font-bold flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+        <div className="p-3 sm:p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2"
+          style={{
+            background: 'rgba(225, 29, 72, 0.1)',
+            borderColor: 'rgba(225, 29, 72, 0.3)',
+            color: 'var(--text-heading)'
+          }}>
+          <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
           <span>{error}</span>
         </div>
       )}
@@ -146,12 +151,12 @@ export default function LiquidDropzone({ onSendSuccess }) {
         <div
           className="p-3 sm:p-3.5 rounded-2xl border text-xs font-bold flex items-center gap-2"
           style={{
-            background: 'rgba(16, 120, 60, 0.15)',
-            borderColor: 'rgba(16, 120, 60, 0.5)',
-            color: '#0a5c2e'
+            background: 'rgba(193, 154, 107, 0.15)',
+            borderColor: 'rgba(193, 154, 107, 0.4)',
+            color: 'var(--text-heading)'
           }}
         >
-          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: '#0d7a3e' }} />
+          <CheckCircle2 className="w-4 h-4 shrink-0" style={{ color: 'var(--accent-color)' }} />
           <span>{success}</span>
         </div>
       )}
