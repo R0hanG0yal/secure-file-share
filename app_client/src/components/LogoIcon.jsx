@@ -44,25 +44,25 @@ export function DSEmblem({ className = "w-9 h-9" }) {
   );
 }
 
-export default function LogoIcon({ className = "h-9" }) {
+export default function LogoIcon({ className = "h-8 sm:h-9" }) {
   return (
-    <div className={`flex items-center gap-3.5 ${className}`}>
+    <div className={`flex items-center gap-2 sm:gap-3 ${className}`}>
       
       {/* Luxury Badge Container */}
-      <div className="w-11 h-11 rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 flex items-center justify-center p-1 shadow-sm backdrop-blur-md">
-        <DSEmblem className="w-8 h-8" />
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/20 flex items-center justify-center p-1 shadow-sm backdrop-blur-md shrink-0">
+        <DSEmblem className="w-6 h-6 sm:w-7 sm:h-7" />
       </div>
 
       {/* Vertical Separator Line */}
-      <div className="w-[2px] h-8 bg-[#1A0F07] dark:bg-white opacity-40 dark:opacity-70" />
+      <div className="w-[1.5px] h-6 sm:h-7 bg-[#1A0F07] dark:bg-white opacity-40 dark:opacity-70 shrink-0" />
 
       {/* Brand Text: DOSHARE SECURE FILE SHARING */}
-      <div className="flex flex-col">
-        <span className="font-black text-lg tracking-[0.15em] theme-text-heading uppercase leading-none font-sans drop-shadow-sm">
+      <div className="flex flex-col shrink-0">
+        <span className="font-black text-sm sm:text-base md:text-lg tracking-[0.12em] theme-text-heading uppercase leading-none font-sans drop-shadow-sm">
           DO<span style={{ color: 'var(--accent-color, #B8860B)' }}>SHARE</span>
         </span>
-        <span className="text-[9px] font-black tracking-[0.25em] theme-text-body uppercase leading-tight mt-1 opacity-90">
-          SECURE FILE SHARING
+        <span className="text-[8px] sm:text-[9px] font-extrabold tracking-[0.2em] theme-text-body uppercase leading-tight mt-0.5 opacity-90 hidden xs:block">
+          SECURE SHARING
         </span>
       </div>
 

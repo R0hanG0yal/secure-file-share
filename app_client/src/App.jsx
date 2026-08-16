@@ -9,11 +9,16 @@ import ResetPin from './pages/ResetPin';
 import SendScreen from './pages/SendScreen';
 import InboxScreen from './pages/InboxScreen';
 import { initSocket, disconnectSocket } from './services/socket';
+import { detectStoredIdentity, clearStoredIdentity, persistFullIdentity } from './services/identity';
 import api from './services/api';
 
 export default function App() {
-  const [username, setUsername] = useState(localStorage.getItem('doshare_user') || localStorage.getItem('identishare_user') || '');
-  const [uuid, setUuid] = useState(localStorage.getItem('doshare_device_uuid') || localStorage.getItem('identishare_device_uuid') || '');
+  const [username, setUsername] = useState(
+    localStorage.getItem('doshare_user') || localStorage.getItem('identishare_user') || ''
+  );
+  const [uuid, setUuid] = useState(
+    localStorage.getItem('doshare_device_uuid') || localStorage.getItem('identishare_device_uuid') || ''
+  );
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Theme Management: Light Mode vs Dark Mode
@@ -36,6 +41,30 @@ export default function App() {
 
   const toggleTheme = () => setIsDarkMode(prev => !prev);
 
+  // Auto-restore & verify username session on boot/deploy
+  useEffect(() => {
+    async function verifyUserSession() {
+      try {
+        const stored = await detectStoredIdentity();
+        if (stored?.token) {
+          const res = await api.get('/me');
+          if (res.data?.authenticated && res.data?.username) {
+            setUsername(res.data.username);
+            if (res.data.uuid) setUuid(res.data.uuid);
+            await persistFullIdentity(stored.token, res.data.username, res.data.uuid || stored.uuid);
+          }
+        }
+      } catch (err) {
+        // Token invalid, clear stale credentials
+        if (err.response?.status === 401 || err.response?.status === 403) {
+          handleLogout();
+        }
+      }
+    }
+
+    verifyUserSession();
+  }, []);
+
   useEffect(() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/sw.js').catch(err => {
@@ -50,6 +79,15 @@ export default function App() {
 
       socket.on('new_file_received', (data) => {
         setUnreadCount(prev => prev + (data.messages ? data.messages.length : 1));
+      });
+
+      socket.on('file_deleted', () => {
+        // Refresh unread count on deletion
+        api.get('/inbox').then(res => {
+          if (res.data && res.data.unreadCount !== undefined) {
+            setUnreadCount(res.data.unreadCount);
+          }
+        }).catch(() => {});
       });
 
       api.get('/inbox').then(res => {
@@ -67,12 +105,11 @@ export default function App() {
     if (deviceUuid) setUuid(deviceUuid);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('doshare_token');
-    localStorage.removeItem('doshare_user');
-    localStorage.removeItem('identishare_token');
-    localStorage.removeItem('identishare_user');
+  const handleLogout = async () => {
+    await clearStoredIdentity();
     setUsername('');
+    setUuid('');
+    setUnreadCount(0);
     disconnectSocket();
   };
 
@@ -89,7 +126,8 @@ export default function App() {
           onToggleTheme={toggleTheme}
         />
 
-        <main className="flex-1 z-10">
+        {/* Main Content Area with mobile safe padding for bottom bar */}
+        <main className={`flex-1 z-10 ${username ? 'pb-24 md:pb-8' : 'pb-8'}`}>
           <Routes>
             <Route path="/" element={<Home onLoginSuccess={handleLoginSuccess} />} />
             <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
@@ -126,8 +164,8 @@ export default function App() {
           </Routes>
         </main>
 
-        <footer className="z-10 py-6 text-center text-xs font-semibold theme-text-muted tracking-wider">
-          <p>DoShare — Dageroz Digital Agency</p>
+        <footer className="z-10 py-4 text-center text-[11px] font-bold theme-text-muted tracking-wider hidden md:block">
+          <p>DoShare — Secure File & Message Transfer</p>
         </footer>
       </div>
     </Router>

@@ -5,13 +5,14 @@ const path = require('path');
 const webpush = require('web-push');
 
 const { authenticateJWT } = require('../middleware/auth');
+const { sendLimiter } = require('../middleware/rateLimiter');
 const MessageStore = require('../models/Message');
 const UserStore = require('../models/User');
 const { uploadFile } = require('../config/cloudinary');
 
 const router = express.Router();
 
-// Multer setup with temporary directory & virtually unlimited size limit
+// Multer setup with temporary directory & safe limits
 const tempStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     const tempDir = path.join(__dirname, '..', 'temp_uploads');
@@ -25,11 +26,11 @@ const tempStorage = multer.diskStorage({
 
 const upload = multer({
   storage: tempStorage,
-  limits: { fileSize: 500 * 1024 * 1024 } // 500MB per file
+  limits: { fileSize: 100 * 1024 * 1024 } // 100MB per file
 });
 
-// POST /api/send (Supports multiple files or single text input)
-router.post('/send', authenticateJWT, upload.array('files', 10), async (req, res) => {
+// POST /api/send (Rate-limited, supports multiple files or single text input)
+router.post('/send', authenticateJWT, sendLimiter, upload.array('files', 10), async (req, res) => {
   try {
     const sender = req.user.username;
     const { receiver, textContent, isText } = req.body;
@@ -150,6 +151,29 @@ router.get('/inbox', authenticateJWT, async (req, res) => {
   } catch (error) {
     console.error('[Inbox Error]', error);
     res.status(500).json({ error: 'Failed to retrieve inbox messages.' });
+  }
+});
+
+// DELETE /api/messages/:id (Delete file from history after download or upon manual delete)
+router.delete('/messages/:id', authenticateJWT, async (req, res) => {
+  try {
+    const messageId = req.params.id;
+    const username = req.user.username;
+
+    const deleted = await MessageStore.deleteMessage(messageId, username);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Message not found or unauthorized to delete.' });
+    }
+
+    const io = req.app.get('socketio');
+    if (io) {
+      io.to(`user_${username.toLowerCase()}`).emit('file_deleted', { messageId });
+    }
+
+    res.json({ success: true, message: 'File deleted from history successfully', id: messageId });
+  } catch (error) {
+    console.error('[Delete Error]', error);
+    res.status(500).json({ error: 'Failed to delete file from history.' });
   }
 });
 

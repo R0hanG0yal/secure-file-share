@@ -45,7 +45,7 @@ try {
 }
 
 // In-Memory Data Fallback for Messages
-const memoryMessages = [];
+let memoryMessages = [];
 
 const MessageStore = {
   async create({ sender, receiver, fileUrl, fileName, fileType, isText }) {
@@ -66,6 +66,14 @@ const MessageStore = {
       };
       memoryMessages.push(msg);
       return msg;
+    }
+  },
+
+  async findById(id) {
+    if (mongoose.connection.readyState === 1) {
+      return await MessageModel.findById(id);
+    } else {
+      return memoryMessages.find(m => m._id.toString() === id.toString()) || null;
     }
   },
 
@@ -111,6 +119,30 @@ const MessageStore = {
       return await MessageModel.countDocuments({ receiver: new RegExp(`^${username}$`, 'i'), delivered: false });
     } else {
       return memoryMessages.filter(m => m.receiver.toLowerCase() === username.toLowerCase() && !m.delivered).length;
+    }
+  },
+
+  async deleteMessage(id, username) {
+    if (mongoose.connection.readyState === 1) {
+      // Allow deletion if the user is the receiver or sender
+      return await MessageModel.findOneAndDelete({
+        _id: id,
+        $or: [
+          { receiver: new RegExp(`^${username}$`, 'i') },
+          { sender: new RegExp(`^${username}$`, 'i') }
+        ]
+      });
+    } else {
+      const index = memoryMessages.findIndex(m =>
+        m._id.toString() === id.toString() &&
+        (m.receiver.toLowerCase() === username.toLowerCase() || m.sender.toLowerCase() === username.toLowerCase())
+      );
+      if (index !== -1) {
+        const deleted = memoryMessages[index];
+        memoryMessages.splice(index, 1);
+        return deleted;
+      }
+      return null;
     }
   }
 };

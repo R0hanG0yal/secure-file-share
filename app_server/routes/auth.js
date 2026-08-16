@@ -1,50 +1,33 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const UserStore = require('../models/User');
-const { generateToken } = require('../middleware/auth');
+const { generateToken, authenticateJWT } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
-// GET /api/check-fingerprint/:fingerprint -> Auto-login matching hardware signature!
-router.get('/check-fingerprint/:fingerprint', async (req, res) => {
+// GET /api/me -> Verify JWT token & restore user profile (solves username missing after deploy)
+router.get('/me', authenticateJWT, async (req, res) => {
   try {
-    const { fingerprint } = req.params;
-    if (!fingerprint) return res.json({ found: false });
-
-    const user = await UserStore.findByFingerprint(fingerprint);
-    if (user) {
-      const token = generateToken({ id: user._id, username: user.username, uuid: user.uuid });
-      return res.json({
-        found: true,
-        username: user.username,
-        uuid: user.uuid,
-        token
-      });
+    const user = await UserStore.findByUsername(req.user.username);
+    if (!user) {
+      return res.status(404).json({ error: 'User profile not found.' });
     }
-    res.json({ found: false });
+    res.json({
+      authenticated: true,
+      username: user.username,
+      uuid: user.uuid || req.user.uuid
+    });
   } catch (error) {
-    res.json({ found: false });
-  }
-});
-
-// GET /api/check-uuid/:uuid
-router.get('/check-uuid/:uuid', async (req, res) => {
-  try {
-    const user = await UserStore.findByUUID(req.params.uuid);
-    if (user) {
-      const token = generateToken({ id: user._id, username: user.username, uuid: user.uuid });
-      return res.json({ found: true, username: user.username, uuid: user.uuid, token });
-    }
-    res.json({ found: false });
-  } catch (error) {
-    res.json({ found: false });
+    console.error('[Profile Error]', error);
+    res.status(500).json({ error: 'Failed to retrieve profile.' });
   }
 });
 
 // POST /api/register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
-    const { username, pin, uuid, fingerprint } = req.body;
+    const { username, pin, uuid } = req.body;
 
     if (!username || typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 20) {
       return res.status(400).json({ error: 'Username must be between 3 and 20 characters.' });
@@ -72,7 +55,7 @@ router.post('/register', async (req, res) => {
       username: cleanUsername,
       pinHash,
       uuid,
-      fingerprint: fingerprint || '',
+      fingerprint: '',
       pushSub: null
     });
 
@@ -91,9 +74,9 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
-    const { username, pin, uuid, fingerprint } = req.body;
+    const { username, pin, uuid } = req.body;
 
     if (!username || !pin) {
       return res.status(400).json({ error: 'Username and 6-digit passcode are required.' });
@@ -111,12 +94,9 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid username or passcode.' });
     }
 
-    // Link UUID & Hardware Fingerprint to user
+    // Link device UUID to user
     if (uuid && user.uuid !== uuid) {
       await UserStore.updateUUID(user._id, uuid);
-    }
-    if (fingerprint) {
-      await UserStore.updateFingerprint(user._id, fingerprint);
     }
 
     const effectiveUUID = uuid || user.uuid;
@@ -135,7 +115,7 @@ router.post('/login', async (req, res) => {
 });
 
 // POST /api/reset-pin
-router.post('/reset-pin', async (req, res) => {
+router.post('/reset-pin', authLimiter, async (req, res) => {
   try {
     const { username, newPin, uuid } = req.body;
 
