@@ -129,10 +129,10 @@ export default function App() {
         {/* Main Content Area with mobile safe padding for bottom bar */}
         <main className={`flex-1 z-10 ${username ? 'pb-24 md:pb-8' : 'pb-8'}`}>
           <Routes>
-            <Route path="/" element={<Home onLoginSuccess={handleLoginSuccess} />} />
-            <Route path="/login" element={<Login onLoginSuccess={handleLoginSuccess} />} />
-            <Route path="/register" element={<Register onLoginSuccess={handleLoginSuccess} />} />
-            <Route path="/reset-pin" element={<ResetPin onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/" element={username ? <Navigate to="/send" replace /> : <Home onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/login" element={username ? <Navigate to="/send" replace /> : <Login onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/register" element={username ? <Navigate to="/send" replace /> : <Register onLoginSuccess={handleLoginSuccess} />} />
+            <Route path="/reset-pin" element={username ? <Navigate to="/send" replace /> : <ResetPin onLoginSuccess={handleLoginSuccess} />} />
 
             <Route
               path="/send"
